@@ -12,11 +12,19 @@ from infrastructure.models import (
     BedPreference,
     RequestStatus,
     RequestUrgency,
+    ReservationFor,
     ReservationRequest,
     RoomType,
     User,
 )
-from schemas.reservation import ReservationCreate, ReservationRead, ReservationUpdate, StatusUpdateBody
+from schemas.reservation import (
+    AdminReservationRead,
+    ReceptionInternalNoteBody,
+    ReservationCreate,
+    ReservationRead,
+    ReservationUpdate,
+    StatusUpdateBody,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +35,26 @@ def _enum_str(v) -> str:
 
 def _normalize_email(email: str) -> str:
     return email.strip().lower()
+
+
+def _reservation_read_from_row(row: ReservationRequest) -> ReservationRead:
+    """Build API read model with coherent guest fields (SELF = podavatel; 1 osoba = bez druhé)."""
+    read = ReservationRead.model_validate(row)
+    updates: dict = {}
+    if read.reservation_for == ReservationFor.SELF:
+        updates["primary_guest_name"] = read.requester_name.strip()
+        updates["primary_guest_email"] = _normalize_email(read.requester_email)
+    if read.staying_person_count == 1:
+        updates["secondary_guest_name"] = None
+        updates["secondary_guest_email"] = None
+    return read.model_copy(update=updates) if updates else read
+
+
+def _admin_reservation_read_from_row(row: ReservationRequest) -> AdminReservationRead:
+    base = _reservation_read_from_row(row)
+    return AdminReservationRead.model_validate(
+        {**base.model_dump(), "reception_internal_note": row.reception_internal_note}
+    )
 
 
 def _reception_recipients() -> List[str]:
@@ -49,6 +77,40 @@ def _notify_employee_safe(to: str, subject: str, body: str) -> None:
         logger.exception("Failed to send employee email to=%s", to)
 
 
+def _normalize_row_guest_fields(row: ReservationRequest) -> None:
+    """Keep primary guest in sync for SELF; clear second guest when count is 1; validate."""
+    if row.staying_person_count not in (1, 2):
+        raise HTTPException(status_code=400, detail="staying_person_count must be 1 or 2")
+
+    if row.reservation_for == ReservationFor.SELF:
+        row.primary_guest_name = row.requester_name.strip()
+        row.primary_guest_email = _normalize_email(row.requester_email)
+    else:
+        pn = (row.primary_guest_name or "").strip()
+        pe = (row.primary_guest_email or "").strip()
+        if not pn or not pe:
+            raise HTTPException(
+                status_code=400,
+                detail="Hlavní ubytovaná osoba: vyplňte jméno i e-mail.",
+            )
+        row.primary_guest_name = pn
+        row.primary_guest_email = _normalize_email(pe)
+
+    if row.staying_person_count == 1:
+        row.secondary_guest_name = None
+        row.secondary_guest_email = None
+    else:
+        sn = (row.secondary_guest_name or "").strip()
+        se = (row.secondary_guest_email or "").strip()
+        if not sn or not se:
+            raise HTTPException(
+                status_code=400,
+                detail="Druhá ubytovaná osoba: vyplňte jméno i e-mail.",
+            )
+        row.secondary_guest_name = sn
+        row.secondary_guest_email = _normalize_email(se)
+
+
 def _apply_bed_preference_rules(
     room_type: RoomType, bed_preference: BedPreference | None
 ) -> None:
@@ -66,10 +128,22 @@ def _ensure_employee_owns(row: ReservationRequest, user: User) -> None:
 
 def create_reservation(session: Session, data: ReservationCreate, user: User) -> ReservationRead:
     _apply_bed_preference_rules(data.room_type, data.bed_preference)
+    if data.reservation_for == ReservationFor.SELF:
+        primary_name = data.requester_name.strip()
+        primary_email = _normalize_email(user.email)
+    else:
+        primary_name = data.primary_guest_name or ""
+        primary_email = data.primary_guest_email or ""
     row = ReservationRequest(
         user_id=user.id,
-        requester_name=data.requester_name,
+        requester_name=data.requester_name.strip(),
         requester_email=_normalize_email(user.email),
+        reservation_for=data.reservation_for,
+        staying_person_count=data.staying_person_count,
+        primary_guest_name=primary_name,
+        primary_guest_email=primary_email,
+        secondary_guest_name=data.secondary_guest_name,
+        secondary_guest_email=data.secondary_guest_email,
         city=data.city,
         date_from=data.date_from,
         date_to=data.date_to,
@@ -80,15 +154,32 @@ def create_reservation(session: Session, data: ReservationCreate, user: User) ->
         urgency_reason=data.urgency_reason,
         status=RequestStatus.NEW,
     )
+    _normalize_row_guest_fields(row)
     session.add(row)
     session.commit()
     session.refresh(row)
     logger.info("Reservation created id=%s user_id=%s", row.id, row.user_id)
 
+    occ_line = f"Počet ubytovaných osob: {row.staying_person_count}\n"
+    for_line = (
+        "Rezervace pro: mně\n"
+        if row.reservation_for == ReservationFor.SELF
+        else "Rezervace pro: jiného kolegu\n"
+    )
+    guest_lines = (
+        f"Hlavní ubytovaná: {row.primary_guest_name} <{row.primary_guest_email}>\n"
+    )
+    if row.staying_person_count == 2 and row.secondary_guest_name:
+        guest_lines += (
+            f"Druhá osoba: {row.secondary_guest_name} <{row.secondary_guest_email}>\n"
+        )
     body = (
         f"Nový požadavek na rezervaci.\n"
         f"ID: {row.id}\n"
         f"Žadatel: {row.requester_name} <{row.requester_email}>\n"
+        f"{for_line}"
+        f"{occ_line}"
+        f"{guest_lines}"
         f"Město: {_enum_str(row.city)}\n"
         f"Termín: {row.date_from} – {row.date_to}\n"
         f"Typ pokoje: {_enum_str(row.room_type)}\n"
@@ -96,7 +187,7 @@ def create_reservation(session: Session, data: ReservationCreate, user: User) ->
     if row.urgency == RequestUrgency.URGENT:
         body += f"Urgence: urgentní\nDůvod: {row.urgency_reason}\n"
     _notify_reception_safe(f"[Hotel] Nový požadavek {row.id}", body)
-    return ReservationRead.model_validate(row)
+    return _reservation_read_from_row(row)
 
 
 def list_my_reservations(session: Session, user: User) -> List[ReservationRead]:
@@ -105,7 +196,7 @@ def list_my_reservations(session: Session, user: User) -> List[ReservationRead]:
         .where(col(ReservationRequest.user_id) == user.id)
         .order_by(ReservationRequest.created_at.desc())
     ).all()
-    return [ReservationRead.model_validate(r) for r in rows]
+    return [_reservation_read_from_row(r) for r in rows]
 
 
 def get_reservation_for_employee(session: Session, reservation_id: UUID, user: User) -> ReservationRead:
@@ -113,7 +204,7 @@ def get_reservation_for_employee(session: Session, reservation_id: UUID, user: U
     if not row:
         raise HTTPException(status_code=404, detail="Reservation not found")
     _ensure_employee_owns(row, user)
-    return ReservationRead.model_validate(row)
+    return _reservation_read_from_row(row)
 
 
 def update_reservation(
@@ -127,6 +218,11 @@ def update_reservation(
         raise HTTPException(status_code=400, detail="Reservation is cancelled")
     if row.status == RequestStatus.BOOKED:
         raise HTTPException(status_code=400, detail="Reservation is already booked")
+    if row.status == RequestStatus.IN_PROGRESS:
+        raise HTTPException(
+            status_code=400,
+            detail="Žádost ve stavu „V řešení“ nelze upravovat.",
+        )
 
     final_rt = data.room_type if data.room_type is not None else row.room_type
     if final_rt == RoomType.SINGLE:
@@ -138,7 +234,21 @@ def update_reservation(
     _apply_bed_preference_rules(final_rt, final_bed)
 
     if data.requester_name is not None:
-        row.requester_name = data.requester_name
+        row.requester_name = data.requester_name.strip()
+    if data.reservation_for is not None:
+        row.reservation_for = data.reservation_for
+    if data.staying_person_count is not None:
+        row.staying_person_count = data.staying_person_count
+    if data.primary_guest_name is not None:
+        row.primary_guest_name = data.primary_guest_name.strip()
+    if data.primary_guest_email is not None:
+        row.primary_guest_email = data.primary_guest_email
+    if data.secondary_guest_name is not None:
+        row.secondary_guest_name = (
+            data.secondary_guest_name.strip() if data.secondary_guest_name else None
+        )
+    if data.secondary_guest_email is not None:
+        row.secondary_guest_email = data.secondary_guest_email
     if data.city is not None:
         row.city = data.city
     if data.date_from is not None:
@@ -154,20 +264,31 @@ def update_reservation(
     if data.note is not None:
         row.note = data.note
 
+    _normalize_row_guest_fields(row)
+
     row.updated_at = datetime.utcnow()
     session.add(row)
     session.commit()
     session.refresh(row)
     logger.info("Reservation updated id=%s", row.id)
 
+    guest_lines = (
+        f"Pro koho: {_enum_str(row.reservation_for)} | Počet osob: {row.staying_person_count}\n"
+        f"Hlavní ubytovaná: {row.primary_guest_name} <{row.primary_guest_email}>\n"
+    )
+    if row.staying_person_count == 2 and row.secondary_guest_name:
+        guest_lines += (
+            f"Druhá osoba: {row.secondary_guest_name} <{row.secondary_guest_email}>\n"
+        )
     body = (
         f"Požadavek byl upraven.\n"
         f"ID: {row.id}\n"
         f"Žadatel: {row.requester_name} <{row.requester_email}>\n"
+        f"{guest_lines}"
         f"Stav: {_enum_str(row.status)}\n"
     )
     _notify_reception_safe(f"[Hotel] Úprava požadavku {row.id}", body)
-    return ReservationRead.model_validate(row)
+    return _reservation_read_from_row(row)
 
 
 def cancel_reservation(session: Session, reservation_id: UUID, user: User) -> ReservationRead:
@@ -176,7 +297,7 @@ def cancel_reservation(session: Session, reservation_id: UUID, user: User) -> Re
         raise HTTPException(status_code=404, detail="Reservation not found")
     _ensure_employee_owns(row, user)
     if row.status == RequestStatus.CANCELLED:
-        return ReservationRead.model_validate(row)
+        return _reservation_read_from_row(row)
 
     was_booked = row.status == RequestStatus.BOOKED
     row.status = RequestStatus.CANCELLED
@@ -192,6 +313,7 @@ def cancel_reservation(session: Session, reservation_id: UUID, user: User) -> Re
         f"Požadavek byl zrušen žadatelem.\n"
         f"ID: {row.id}\n"
         f"Žadatel: {row.requester_name} <{row.requester_email}>\n"
+        f"Hlavní ubytovaná: {row.primary_guest_name} <{row.primary_guest_email}>\n"
     )
     if was_booked:
         text += (
@@ -199,29 +321,44 @@ def cancel_reservation(session: Session, reservation_id: UUID, user: User) -> Re
             f"č. {row.reservation_number or '—'})\n"
         )
     _notify_reception_safe(f"[Hotel] Zrušení požadavku {row.id}", text)
-    return ReservationRead.model_validate(row)
+    return _reservation_read_from_row(row)
 
 
 def list_admin_reservations(
     session: Session, status: Optional[RequestStatus] = None
-) -> List[ReservationRead]:
+) -> List[AdminReservationRead]:
     q = select(ReservationRequest).order_by(ReservationRequest.created_at.desc())
     if status is not None:
         q = q.where(col(ReservationRequest.status) == status)
     rows = session.exec(q).all()
-    return [ReservationRead.model_validate(r) for r in rows]
+    return [_admin_reservation_read_from_row(r) for r in rows]
 
 
-def get_reservation_admin(session: Session, reservation_id: UUID) -> ReservationRead:
+def get_reservation_admin(session: Session, reservation_id: UUID) -> AdminReservationRead:
     row = session.get(ReservationRequest, reservation_id)
     if not row:
         raise HTTPException(status_code=404, detail="Reservation not found")
-    return ReservationRead.model_validate(row)
+    return _admin_reservation_read_from_row(row)
+
+
+def update_reception_internal_note(
+    session: Session, reservation_id: UUID, data: ReceptionInternalNoteBody
+) -> AdminReservationRead:
+    row = session.get(ReservationRequest, reservation_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    row.reception_internal_note = data.reception_internal_note
+    row.updated_at = datetime.utcnow()
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    logger.info("Reception internal note updated id=%s", row.id)
+    return _admin_reservation_read_from_row(row)
 
 
 def update_status(
     session: Session, reservation_id: UUID, data: StatusUpdateBody
-) -> ReservationRead:
+) -> AdminReservationRead:
     row = session.get(ReservationRequest, reservation_id)
     if not row:
         raise HTTPException(status_code=404, detail="Reservation not found")
@@ -261,4 +398,4 @@ def update_status(
             booked_body,
         )
 
-    return ReservationRead.model_validate(row)
+    return _admin_reservation_read_from_row(row)

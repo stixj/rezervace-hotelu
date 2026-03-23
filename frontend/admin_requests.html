@@ -21,6 +21,10 @@
                         alt=""
                     />
                 </a>
+                <div class="brand-app-lines">
+                    <span class="brand-title">Rezervace hotelu</span>
+                    <span class="brand-sub">Recepce</span>
+                </div>
             </div>
             <nav class="nav-pill" id="main-nav" aria-label="Hlavní navigace"></nav>
         </div>
@@ -37,21 +41,60 @@
                         <h2 class="inbox-bento-card__title">Urgentní k řešení</h2>
                         <span class="inbox-bento-count" id="inbox-count-urgent" aria-hidden="true">0</span>
                     </header>
+                    <div class="inbox-bento-legend" aria-hidden="true">
+                        <span class="inbox-bento-legend__cell">Žadatel</span>
+                        <span class="inbox-bento-legend__cell">Město</span>
+                        <span class="inbox-bento-legend__cell">Podání žádosti</span>
+                        <span class="inbox-bento-legend__cell">Termín pobytu</span>
+                        <span class="inbox-bento-legend__cell inbox-bento-legend__cell--tail">Detail</span>
+                    </div>
                     <ul class="inbox-bento-list" id="inbox-list-urgent"></ul>
+                    <footer class="inbox-bento-card__footer">
+                        <p class="inbox-bento-card__more-hint" id="inbox-more-hint-urgent" hidden></p>
+                        <button type="button" class="inbox-bento-open-table" data-inbox-slice="urgent">
+                            Zobrazit vše ve filtru
+                        </button>
+                    </footer>
                 </section>
                 <section class="inbox-bento-card inbox-bento-card--new" id="inbox-block-new" hidden>
                     <header class="inbox-bento-card__header">
                         <h2 class="inbox-bento-card__title">Nové žádosti</h2>
                         <span class="inbox-bento-count" id="inbox-count-new" aria-hidden="true">0</span>
                     </header>
+                    <div class="inbox-bento-legend" aria-hidden="true">
+                        <span class="inbox-bento-legend__cell">Žadatel</span>
+                        <span class="inbox-bento-legend__cell">Město</span>
+                        <span class="inbox-bento-legend__cell">Podání žádosti</span>
+                        <span class="inbox-bento-legend__cell">Termín pobytu</span>
+                        <span class="inbox-bento-legend__cell inbox-bento-legend__cell--tail">Detail</span>
+                    </div>
                     <ul class="inbox-bento-list" id="inbox-list-new"></ul>
+                    <footer class="inbox-bento-card__footer">
+                        <p class="inbox-bento-card__more-hint" id="inbox-more-hint-new" hidden></p>
+                        <button type="button" class="inbox-bento-open-table" data-inbox-slice="new">
+                            Zobrazit vše ve filtru
+                        </button>
+                    </footer>
                 </section>
                 <section class="inbox-bento-card inbox-bento-card--storno" id="inbox-block-storno" hidden>
                     <header class="inbox-bento-card__header">
-                        <h2 class="inbox-bento-card__title">Storna ke kontrole</h2>
+                        <h2 class="inbox-bento-card__title">Storno ke kontrole</h2>
                         <span class="inbox-bento-count" id="inbox-count-storno" aria-hidden="true">0</span>
                     </header>
+                    <div class="inbox-bento-legend" aria-hidden="true">
+                        <span class="inbox-bento-legend__cell">Žadatel</span>
+                        <span class="inbox-bento-legend__cell">Město</span>
+                        <span class="inbox-bento-legend__cell">Podání žádosti</span>
+                        <span class="inbox-bento-legend__cell">Termín pobytu</span>
+                        <span class="inbox-bento-legend__cell inbox-bento-legend__cell--tail">Detail</span>
+                    </div>
                     <ul class="inbox-bento-list" id="inbox-list-storno"></ul>
+                    <footer class="inbox-bento-card__footer">
+                        <p class="inbox-bento-card__more-hint" id="inbox-more-hint-storno" hidden></p>
+                        <button type="button" class="inbox-bento-open-table" data-inbox-slice="storno">
+                            Zobrazit vše ve filtru
+                        </button>
+                    </footer>
                 </section>
             </div>
         </div>
@@ -69,14 +112,20 @@
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
-                    <button type="submit" class="ghost">Filtrovat</button>
+                    <label>Akce</label>
+                    <div class="reception-filter-action-row">
+                        <button type="submit" class="ghost">Filtrovat</button>
+                        <button type="button" class="ghost" id="filter-reset-btn">
+                            Resetovat filtr
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
 
         <div id="list-message" class="message" hidden role="status"></div>
 
-        <div class="form-container loaded">
+        <div class="form-container loaded" id="reception-requests-table-region">
             <div class="table-wrap">
                 <table class="data-table" id="requests-table">
                     <thead>
@@ -84,6 +133,11 @@
                             <th scope="col" class="sort-cell">
                                 <button type="button" class="th-sort" data-sort="status" aria-label="Řadit podle stavu">
                                     Stav<span class="sort-ind" aria-hidden="true">▲▼</span>
+                                </button>
+                            </th>
+                            <th scope="col" class="sort-cell">
+                                <button type="button" class="th-sort" data-sort="created_at" aria-label="Řadit podle data a času podání žádosti" title="Datum a čas podání žádosti (ne termín pobytu)">
+                                    Podání žádosti<span class="sort-ind" aria-hidden="true">▲▼</span>
                                 </button>
                             </th>
                             <th scope="col" class="sort-cell">
@@ -102,7 +156,7 @@
                                 </button>
                             </th>
                             <th scope="col" class="sort-cell">
-                                <button type="button" class="th-sort" data-sort="term" aria-label="Řadit podle termínu">
+                                <button type="button" class="th-sort" data-sort="term" aria-label="Řadit podle termínu pobytu" title="Termín pobytu">
                                     Termín<span class="sort-ind" aria-hidden="true">▲▼</span>
                                 </button>
                             </th>
@@ -111,6 +165,23 @@
                     </thead>
                     <tbody id="requests-body"></tbody>
                 </table>
+            </div>
+            <div id="requests-pagination-wrap" class="reception-pagination-wrap" hidden>
+                <div class="reception-pagination-toolbar">
+                    <p class="reception-pagination-range" id="pagination-range" aria-live="polite"></p>
+                    <label class="reception-pagination-size-label">
+                        <span class="reception-pagination-size-text">Řádků na stránku</span>
+                        <select id="pagination-page-size" class="reception-pagination-size-select">
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </label>
+                </div>
+                <nav class="reception-pagination-nav" aria-label="Stránkování tabulky žádostí">
+                    <button type="button" class="ghost reception-pagination-step" id="pagination-prev">Předchozí</button>
+                    <div class="reception-pagination-pages" id="pagination-pages"></div>
+                    <button type="button" class="ghost reception-pagination-step" id="pagination-next">Další</button>
+                </nav>
             </div>
             <p id="empty-hint" class="page-lead" hidden>Žádné záznamy.</p>
         </div>
@@ -123,12 +194,12 @@
                 <span class="site-footer-phone">221 221 221</span>
             </div>
             <p class="site-footer-legal">
-                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+                Direct pojišťovna, a.s. · Interní aplikace — žádosti o rezervaci hotelu.
             </p>
         </div>
     </footer>
 
-    <script src="/js/common.js?v=3"></script>
+    <script src="/js/common.js?v=6"></script>
     <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
@@ -155,13 +226,27 @@
             const inboxCountUrgent = document.getElementById("inbox-count-urgent");
             const inboxCountNew = document.getElementById("inbox-count-new");
             const inboxCountStorno = document.getElementById("inbox-count-storno");
+            const inboxMoreHintUrgent = document.getElementById("inbox-more-hint-urgent");
+            const inboxMoreHintNew = document.getElementById("inbox-more-hint-new");
+            const inboxMoreHintStorno = document.getElementById("inbox-more-hint-storno");
+            const tableRegionEl = document.getElementById("reception-requests-table-region");
+            const paginationWrap = document.getElementById("requests-pagination-wrap");
+            const paginationRangeEl = document.getElementById("pagination-range");
+            const paginationPagesEl = document.getElementById("pagination-pages");
+            const paginationPrev = document.getElementById("pagination-prev");
+            const paginationNext = document.getElementById("pagination-next");
+            const paginationPageSize = document.getElementById("pagination-page-size");
 
             /** @type {object[]} */
             let listData = [];
+            /** @type {null | 'urgent' | 'new' | 'storno'} — null = jen podle pole Stav + Filtrovat */
+            let inboxTableMode = null;
             /** @type {string|null} */
-            let sortKey = null;
+            let sortKey = "created_at";
             /** @type {'asc'|'desc'} */
-            let sortDir = "asc";
+            let sortDir = "desc";
+            let tablePage = 1;
+            let tablePageSize = 20;
 
             const STATUS_RANK = {
                 NEW: 0,
@@ -194,11 +279,30 @@
 
             const INBOX_PREVIEW_MAX = 4;
 
-            function inboxSortByTermAsc(rows) {
+            function inboxSortByCreatedDesc(rows) {
                 return [...rows].sort((a, b) => {
-                    const c = String(a.date_from).localeCompare(String(b.date_from));
-                    return c !== 0 ? c : String(a.date_to).localeCompare(String(b.date_to));
+                    const ta = HotelCommon.parseBackendUtcDateTime(a.created_at);
+                    const tb = HotelCommon.parseBackendUtcDateTime(b.created_at);
+                    const na = ta ? ta.getTime() : 0;
+                    const nb = tb ? tb.getTime() : 0;
+                    return nb - na;
                 });
+            }
+
+            function inboxAriaLabel(r) {
+                const submitted = HotelCommon.formatRequestSubmittedPlain(r.created_at);
+                const submittedPart = submitted ? `podání žádosti ${submitted}` : "";
+                return [
+                    "Otevřít detail žádosti",
+                    r.requester_name,
+                    r.city,
+                    submittedPart,
+                    `termín ${r.date_from} – ${r.date_to}`,
+                ].filter(Boolean)
+                    .join(", ")
+                    .replace(/&/g, "&amp;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/</g, "&lt;");
             }
 
             function inboxRowHtml(r, opts) {
@@ -212,32 +316,203 @@
                 const name = HotelCommon.escapeHtml(r.requester_name);
                 const city = HotelCommon.escapeHtml(r.city);
                 const term = `${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}`;
+                const submitted = HotelCommon.formatRequestSubmittedCs(r.created_at);
+                const aria = inboxAriaLabel(r);
                 return `<li class="inbox-bento-li">
-  <a class="inbox-bento-row" href="${href}">
+  <a class="inbox-bento-row" href="${href}" aria-label="${aria}">
     <span class="inbox-bento-row__lead">${chip}<span class="inbox-bento-row__name">${name}</span></span>
     <span class="inbox-bento-row__city" title="Město">${city}</span>
-    <span class="inbox-bento-row__term" title="Termín">${term}</span>
-    <span class="inbox-bento-row__detail">Detail</span>
+    <span class="inbox-bento-row__submitted" title="Datum a čas podání žádosti">${submitted}</span>
+    <span class="inbox-bento-row__term" title="Termín pobytu">${term}</span>
+    <span class="inbox-bento-row__detail"><span class="inbox-bento-row__detail-text">Detail</span><span class="inbox-bento-row__detail-chev" aria-hidden="true">›</span></span>
   </a>
 </li>`;
             }
 
-            function setInboxBlock(blockEl, listEl, countEl, items, rowOpts) {
+            /**
+             * @param {'urgent'|'new'|'storno'} sliceKey
+             */
+            function inboxCardMoreHintText(sliceKey, shown, total) {
+                const head = "Zobrazeny " + shown + " z " + total;
+                if (sliceKey === "urgent") {
+                    return (
+                        head +
+                        " nejnovějších. Další urgentní žádosti otevřete ve filtru níže."
+                    );
+                }
+                if (sliceKey === "new") {
+                    return (
+                        head +
+                        " nejnovějších. Další nové žádosti otevřete ve filtru níže."
+                    );
+                }
+                return head + " ke kontrole. Další otevřete ve filtru níže.";
+            }
+
+            /**
+             * @param {'urgent'|'new'|'storno'} sliceKey
+             */
+            function setInboxBlock(
+                blockEl,
+                listEl,
+                countEl,
+                moreHintEl,
+                items,
+                rowOpts,
+                sliceKey
+            ) {
                 if (!items.length) {
                     blockEl.hidden = true;
                     listEl.innerHTML = "";
                     if (countEl) {
                         countEl.textContent = "0";
                     }
+                    if (moreHintEl) {
+                        moreHintEl.hidden = true;
+                        moreHintEl.textContent = "";
+                    }
                     return;
                 }
                 blockEl.hidden = false;
                 const total = items.length;
-                const preview = inboxSortByTermAsc(items).slice(0, INBOX_PREVIEW_MAX);
+                const preview = inboxSortByCreatedDesc(items).slice(0, INBOX_PREVIEW_MAX);
                 if (countEl) {
                     countEl.textContent = String(total);
                 }
                 listEl.innerHTML = preview.map((r) => inboxRowHtml(r, rowOpts)).join("");
+                if (moreHintEl) {
+                    if (total > preview.length) {
+                        moreHintEl.textContent = inboxCardMoreHintText(
+                            sliceKey,
+                            preview.length,
+                            total
+                        );
+                        moreHintEl.hidden = false;
+                    } else {
+                        moreHintEl.hidden = true;
+                        moreHintEl.textContent = "";
+                    }
+                }
+            }
+
+            function requestTotalLabelCs(n) {
+                if (n === 1) {
+                    return "1 žádost";
+                }
+                if (n >= 2 && n <= 4) {
+                    return n + " žádosti";
+                }
+                return n + " žádostí";
+            }
+
+            /** @returns {(number|null)[]} null = ellipsis gap */
+            function paginationVisiblePages(current, total) {
+                if (total <= 7) {
+                    const a = [];
+                    for (let i = 1; i <= total; i++) {
+                        a.push(i);
+                    }
+                    return a;
+                }
+                const delta = 2;
+                const range = new Set([1, total]);
+                for (let i = current - delta; i <= current + delta; i++) {
+                    if (i > 1 && i < total) {
+                        range.add(i);
+                    }
+                }
+                const sorted = [...range].sort((a, b) => a - b);
+                const out = [];
+                for (let i = 0; i < sorted.length; i++) {
+                    if (i > 0 && sorted[i] - sorted[i - 1] > 1) {
+                        out.push(null);
+                    }
+                    out.push(sorted[i]);
+                }
+                return out;
+            }
+
+            function renderPaginationControls(totalRows) {
+                if (!paginationWrap || !paginationRangeEl || !paginationPagesEl) {
+                    return;
+                }
+                if (!totalRows) {
+                    paginationWrap.hidden = true;
+                    return;
+                }
+                paginationWrap.hidden = false;
+                const totalPages = Math.max(1, Math.ceil(totalRows / tablePageSize));
+                if (tablePage > totalPages) {
+                    tablePage = totalPages;
+                }
+                if (tablePage < 1) {
+                    tablePage = 1;
+                }
+                const from = (tablePage - 1) * tablePageSize + 1;
+                const to = Math.min(tablePage * tablePageSize, totalRows);
+                paginationRangeEl.textContent =
+                    from +
+                    "–" +
+                    to +
+                    " z " +
+                    requestTotalLabelCs(totalRows);
+
+                if (paginationPrev) {
+                    paginationPrev.disabled = tablePage <= 1;
+                }
+                if (paginationNext) {
+                    paginationNext.disabled = tablePage >= totalPages;
+                }
+
+                const parts = paginationVisiblePages(tablePage, totalPages);
+                paginationPagesEl.innerHTML = parts
+                    .map((p) => {
+                        if (p === null) {
+                            return '<span class="reception-pagination-ellipsis" aria-hidden="true">…</span>';
+                        }
+                        const active = p === tablePage;
+                        return (
+                            '<button type="button" class="ghost reception-pagination-page' +
+                            (active ? " is-active" : "") +
+                            '" data-pagination-page="' +
+                            p +
+                            '"' +
+                            (active ? ' aria-current="page"' : "") +
+                            ">" +
+                            p +
+                            "</button>"
+                        );
+                    })
+                    .join("");
+            }
+
+            /** Rows for the main table after inbox slice or Stav filter (before column sort). */
+            function tableSourceRows() {
+                if (inboxTableMode === "urgent") {
+                    return listData.filter(
+                        (r) => r.urgency === "URGENT" && isActiveWorkflow(r)
+                    );
+                }
+                if (inboxTableMode === "new") {
+                    return listData.filter((r) => r.status === "NEW");
+                }
+                if (inboxTableMode === "storno") {
+                    return listData.filter(
+                        (r) => r.status === "CANCELLED" && r.was_ever_booked === true
+                    );
+                }
+                const st = statusFilter.value;
+                if (!st) {
+                    return listData.slice();
+                }
+                return listData.filter((r) => r.status === st);
+            }
+
+            function scrollToMainTable() {
+                if (!tableRegionEl) {
+                    return;
+                }
+                tableRegionEl.scrollIntoView({ behavior: "smooth", block: "start" });
             }
 
             function renderInbox() {
@@ -255,18 +530,28 @@
                     inboxBlockUrgent,
                     inboxListUrgent,
                     inboxCountUrgent,
+                    inboxMoreHintUrgent,
                     urgent,
-                    { showUrgency: true }
+                    { showUrgency: true },
+                    "urgent"
                 );
-                setInboxBlock(inboxBlockNew, inboxListNew, inboxCountNew, newStd, {
-                    showUrgency: false,
-                });
+                setInboxBlock(
+                    inboxBlockNew,
+                    inboxListNew,
+                    inboxCountNew,
+                    inboxMoreHintNew,
+                    newStd,
+                    { showUrgency: false },
+                    "new"
+                );
                 setInboxBlock(
                     inboxBlockStorno,
                     inboxListStorno,
                     inboxCountStorno,
+                    inboxMoreHintStorno,
                     storno,
-                    { showUrgency: false }
+                    { showUrgency: false },
+                    "storno"
                 );
                 const nU = urgent.length ? 1 : 0;
                 const nN = newStd.length ? 1 : 0;
@@ -316,15 +601,22 @@
                     if (cmp === 0) {
                         cmp = String(a.date_to).localeCompare(String(b.date_to));
                     }
+                } else if (key === "created_at") {
+                    const ta = HotelCommon.parseBackendUtcDateTime(a.created_at);
+                    const tb = HotelCommon.parseBackendUtcDateTime(b.created_at);
+                    const na = ta ? ta.getTime() : 0;
+                    const nb = tb ? tb.getTime() : 0;
+                    cmp = na - nb;
                 }
                 return cmp * mul;
             }
 
             function sortedRows() {
+                const src = tableSourceRows();
                 if (!sortKey) {
-                    return listData.slice();
+                    return src.slice();
                 }
-                return [...listData].sort((a, b) =>
+                return [...src].sort((a, b) =>
                     compareRows(a, b, sortKey, sortDir)
                 );
             }
@@ -366,14 +658,34 @@
                     emptyHint.hidden = false;
                     requestsTable.hidden = true;
                     tbody.innerHTML = "";
+                    renderPaginationControls(0);
                     renderInbox();
                     updateSortIndicators();
                     return;
                 }
+                const rows = sortedRows();
+                if (!rows.length) {
+                    emptyHint.hidden = false;
+                    requestsTable.hidden = true;
+                    tbody.innerHTML = "";
+                    renderPaginationControls(0);
+                    renderInbox();
+                    updateSortIndicators();
+                    return;
+                }
+                const totalRows = rows.length;
+                const totalPages = Math.max(1, Math.ceil(totalRows / tablePageSize));
+                if (tablePage > totalPages) {
+                    tablePage = totalPages;
+                }
+                if (tablePage < 1) {
+                    tablePage = 1;
+                }
+                const start = (tablePage - 1) * tablePageSize;
+                const pageRows = rows.slice(start, start + tablePageSize);
                 emptyHint.hidden = true;
                 requestsTable.hidden = false;
-                const rows = sortedRows();
-                tbody.innerHTML = rows
+                tbody.innerHTML = pageRows
                     .map((r) => {
                         const idEnc = encodeURIComponent(r.id);
                         const chip = HotelCommon.urgencyChipHtml(
@@ -382,34 +694,42 @@
                         );
                         return `<tr>
               <td class="status-and-urgency-cell"><span class="status-pill" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span>${chip}</td>
+              <td class="request-submitted-cell">${HotelCommon.formatRequestSubmittedCs(r.created_at)}</td>
               <td>${HotelCommon.escapeHtml(r.requester_name)}</td>
               <td>${HotelCommon.escapeHtml(r.requester_email)}</td>
               <td>${HotelCommon.escapeHtml(r.city)}</td>
-              <td>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</td>
+              <td class="request-stay-term-cell">${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</td>
               <td><a href="/admin/requests/${idEnc}">Detail</a></td>
             </tr>`;
                     })
                     .join("");
+                renderPaginationControls(totalRows);
                 renderInbox();
                 updateSortIndicators();
             }
 
             async function loadList() {
                 msgEl.hidden = true;
-                const q = statusFilter.value
-                    ? "?status=" + encodeURIComponent(statusFilter.value)
-                    : "";
-                const { res, data } = await HotelAuth.apiJson("/admin/reservations" + q);
+                tablePage = 1;
+                if (inboxTableMode === "new") {
+                    statusFilter.value = "NEW";
+                } else if (inboxTableMode === "storno") {
+                    statusFilter.value = "CANCELLED";
+                } else if (inboxTableMode === "urgent") {
+                    statusFilter.value = "";
+                }
+                const { res, data } = await HotelAuth.apiJson("/admin/reservations");
                 if (res.status === 403) {
                     showMessage("error", "Přístup pouze pro roli recepce.");
-                    return;
+                    return false;
                 }
                 if (!res.ok) {
                     showMessage("error", HotelCommon.parseErrorDetail(data));
-                    return;
+                    return false;
                 }
                 listData = Array.isArray(data) ? data : [];
                 renderTable();
+                return true;
             }
 
             document.querySelectorAll(".th-sort").forEach((btn) => {
@@ -422,7 +742,7 @@
                         sortDir = sortDir === "asc" ? "desc" : "asc";
                     } else {
                         sortKey = key;
-                        sortDir = "asc";
+                        sortDir = key === "created_at" ? "desc" : "asc";
                     }
                     renderTable();
                 });
@@ -430,8 +750,84 @@
 
             filterForm.addEventListener("submit", (e) => {
                 e.preventDefault();
+                inboxTableMode = null;
                 loadList();
             });
+
+            document.getElementById("filter-reset-btn").addEventListener("click", () => {
+                statusFilter.value = "";
+                inboxTableMode = null;
+                loadList();
+            });
+
+            inboxWrap.addEventListener("click", (e) => {
+                const btn = e.target.closest(".inbox-bento-open-table[data-inbox-slice]");
+                if (!btn) {
+                    return;
+                }
+                const slice = btn.getAttribute("data-inbox-slice");
+                if (slice === "urgent" || slice === "new" || slice === "storno") {
+                    inboxTableMode = slice;
+                    if (slice === "new") {
+                        statusFilter.value = "NEW";
+                    } else if (slice === "storno") {
+                        statusFilter.value = "CANCELLED";
+                    } else {
+                        statusFilter.value = "";
+                    }
+                    tablePage = 1;
+                    renderTable();
+                    requestAnimationFrame(() => scrollToMainTable());
+                }
+            });
+
+            if (paginationPrev) {
+                paginationPrev.addEventListener("click", () => {
+                    if (tablePage > 1) {
+                        tablePage -= 1;
+                        renderTable();
+                    }
+                });
+            }
+            if (paginationNext) {
+                paginationNext.addEventListener("click", () => {
+                    const rows = sortedRows();
+                    const totalPages = Math.max(
+                        1,
+                        Math.ceil(rows.length / tablePageSize)
+                    );
+                    if (tablePage < totalPages) {
+                        tablePage += 1;
+                        renderTable();
+                    }
+                });
+            }
+            if (paginationPagesEl) {
+                paginationPagesEl.addEventListener("click", (e) => {
+                    const btn = e.target.closest("[data-pagination-page]");
+                    if (!btn) {
+                        return;
+                    }
+                    const n = parseInt(
+                        btn.getAttribute("data-pagination-page"),
+                        10
+                    );
+                    if (!Number.isFinite(n) || n < 1) {
+                        return;
+                    }
+                    tablePage = n;
+                    renderTable();
+                });
+            }
+            if (paginationPageSize) {
+                paginationPageSize.value = String(tablePageSize);
+                paginationPageSize.addEventListener("change", () => {
+                    const v = parseInt(paginationPageSize.value, 10);
+                    tablePageSize = v === 50 ? 50 : 20;
+                    tablePage = 1;
+                    renderTable();
+                });
+            }
 
             (async () => {
                 const meRes = await fetch(

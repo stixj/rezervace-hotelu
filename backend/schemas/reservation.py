@@ -2,17 +2,40 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
+import email_validator as ev
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from infrastructure.models import BedPreference, RequestStatus, RequestUrgency, RoomType
+from infrastructure.models import (
+    BedPreference,
+    RequestStatus,
+    RequestUrgency,
+    ReservationFor,
+    RoomType,
+)
 
 # Shown by GET /__hotel_ready — if your browser still gets enum errors for city, this PID/server is stale.
 RESERVATION_CITY_BODY_SCHEMA = "free_text_string"
 
+
+def _guest_email_normalized(raw: str) -> str:
+    try:
+        return ev.validate_email(
+            raw.strip().lower(), check_deliverability=False, test_environment=True
+        ).normalized
+    except ev.EmailNotValidError as e:
+        raise ValueError(str(e)) from e
+
+
 class ReservationCreate(BaseModel):
-    """Create payload for authenticated employee; email comes from the logged-in user."""
+    """Create payload for authenticated employee; requester email comes from the logged-in user."""
 
     requester_name: str = Field(..., min_length=1)
+    reservation_for: ReservationFor = ReservationFor.SELF
+    staying_person_count: int = Field(default=1, ge=1, le=2)
+    primary_guest_name: Optional[str] = None
+    primary_guest_email: Optional[str] = None
+    secondary_guest_name: Optional[str] = None
+    secondary_guest_email: Optional[str] = None
     city: str = Field(..., min_length=1, max_length=200)
     date_from: date
     date_to: date
@@ -45,6 +68,45 @@ class ReservationCreate(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_guest_fields(self):
+        if self.reservation_for == ReservationFor.COLLEAGUE:
+            pn = (self.primary_guest_name or "").strip()
+            pe = (self.primary_guest_email or "").strip()
+            if not pn:
+                raise ValueError("primary_guest_name is required when reservation_for is COLLEAGUE")
+            if not pe:
+                raise ValueError("primary_guest_email is required when reservation_for is COLLEAGUE")
+            self.primary_guest_name = pn
+            try:
+                self.primary_guest_email = _guest_email_normalized(pe)
+            except ValueError as e:
+                raise ValueError(f"primary_guest_email: {e}") from e
+        else:
+            self.primary_guest_name = None
+            self.primary_guest_email = None
+
+        if self.staying_person_count == 2:
+            sn = (self.secondary_guest_name or "").strip()
+            se = (self.secondary_guest_email or "").strip()
+            if not sn:
+                raise ValueError(
+                    "secondary_guest_name is required when staying_person_count is 2"
+                )
+            if not se:
+                raise ValueError(
+                    "secondary_guest_email is required when staying_person_count is 2"
+                )
+            self.secondary_guest_name = sn
+            try:
+                self.secondary_guest_email = _guest_email_normalized(se)
+            except ValueError as e:
+                raise ValueError(f"secondary_guest_email: {e}") from e
+        else:
+            self.secondary_guest_name = None
+            self.secondary_guest_email = None
+        return self
+
+    @model_validator(mode="after")
     def validate_urgency_reason(self):
         if self.urgency == RequestUrgency.URGENT:
             if not self.urgency_reason:
@@ -58,6 +120,12 @@ class ReservationUpdate(BaseModel):
     """Employee update; ownership enforced in the service from the current user."""
 
     requester_name: Optional[str] = Field(None, min_length=1)
+    reservation_for: Optional[ReservationFor] = None
+    staying_person_count: Optional[int] = Field(None, ge=1, le=2)
+    primary_guest_name: Optional[str] = None
+    primary_guest_email: Optional[str] = None
+    secondary_guest_name: Optional[str] = None
+    secondary_guest_email: Optional[str] = None
     city: Optional[str] = Field(None, min_length=1, max_length=200)
     date_from: Optional[date] = None
     date_to: Optional[date] = None
@@ -84,11 +152,38 @@ class ReservationUpdate(BaseModel):
             raise ValueError("bed_preference must be None when room_type is single")
         return self
 
+    @field_validator("primary_guest_email", "secondary_guest_email")
+    @classmethod
+    def optional_guest_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = v.strip()
+        if not s:
+            return None
+        try:
+            return _guest_email_normalized(s)
+        except ValueError as e:
+            raise ValueError(str(e)) from e
+
 
 class StatusUpdateBody(BaseModel):
     status: RequestStatus
     hotel_name: Optional[str] = None
     reservation_number: Optional[str] = None
+
+
+class ReceptionInternalNoteBody(BaseModel):
+    """Reception-only; stored separately from employee `note`."""
+
+    reception_internal_note: Optional[str] = Field(None, max_length=20000)
+
+    @field_validator("reception_internal_note")
+    @classmethod
+    def strip_internal_note(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = v.strip()
+        return s if s else None
 
 
 class ReservationRead(BaseModel):
@@ -98,6 +193,12 @@ class ReservationRead(BaseModel):
     user_id: Optional[UUID] = None
     requester_name: str
     requester_email: str
+    reservation_for: ReservationFor
+    staying_person_count: int
+    primary_guest_name: str
+    primary_guest_email: str
+    secondary_guest_name: Optional[str]
+    secondary_guest_email: Optional[str]
     city: str
     date_from: date
     date_to: date
@@ -113,3 +214,9 @@ class ReservationRead(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
     cancelled_at: Optional[datetime]
+
+
+class AdminReservationRead(ReservationRead):
+    """Admin/reception API only — includes fields hidden from employee clients."""
+
+    reception_internal_note: Optional[str] = None

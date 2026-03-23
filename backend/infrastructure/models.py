@@ -4,7 +4,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column
-from sqlalchemy.types import String
+from sqlalchemy.types import String, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -35,6 +35,13 @@ class BedPreference(str, enum.Enum):
     TWIN = "twin"
 
 
+class ReservationFor(str, enum.Enum):
+    """Who the stay is booked for (submitter may differ)."""
+
+    SELF = "SELF"
+    COLLEAGUE = "COLLEAGUE"
+
+
 class User(SQLModel, table=True):
     __tablename__ = "users"
 
@@ -52,6 +59,14 @@ class ReservationRequest(SQLModel, table=True):
     user_id: Optional[UUID] = Field(default=None, foreign_key="users.id", index=True)
     requester_name: str
     requester_email: str
+    reservation_for: ReservationFor = Field(
+        default=ReservationFor.SELF, sa_column=Column(String)
+    )
+    staying_person_count: int = Field(default=1)
+    primary_guest_name: str
+    primary_guest_email: str
+    secondary_guest_name: Optional[str] = None
+    secondary_guest_email: Optional[str] = None
     city: str = Field(sa_column=Column(String))
     date_from: date
     date_to: date
@@ -60,6 +75,9 @@ class ReservationRequest(SQLModel, table=True):
         default=None, sa_column=Column(String, nullable=True)
     )
     note: Optional[str] = None
+    reception_internal_note: Optional[str] = Field(
+        default=None, sa_column=Column(Text, nullable=True)
+    )
     urgency: RequestUrgency = Field(
         default=RequestUrgency.STANDARD, sa_column=Column(String)
     )

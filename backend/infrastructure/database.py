@@ -89,6 +89,129 @@ def _migrate_reservation_urgency_and_booking_flag() -> None:
     logger.info("Migration: reservation_request urgency / was_ever_booked ensured")
 
 
+def _migrate_reservation_guest_fields() -> None:
+    """Add reservation_for, staying_person_count, primary/secondary guest columns; backfill legacy rows."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if not insp.has_table("reservation_request"):
+        return
+    cols = {c["name"] for c in insp.get_columns("reservation_request")}
+    with engine.connect() as conn:
+        if "reservation_for" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE reservation_request ADD COLUMN reservation_for VARCHAR(20) DEFAULT 'SELF'"
+                )
+            )
+            conn.commit()
+        if "staying_person_count" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE reservation_request ADD COLUMN staying_person_count INTEGER DEFAULT 1"
+                )
+            )
+            conn.commit()
+        if "primary_guest_name" not in cols:
+            conn.execute(text("ALTER TABLE reservation_request ADD COLUMN primary_guest_name VARCHAR(255)"))
+            conn.commit()
+        if "primary_guest_email" not in cols:
+            conn.execute(text("ALTER TABLE reservation_request ADD COLUMN primary_guest_email VARCHAR(255)"))
+            conn.commit()
+        if "secondary_guest_name" not in cols:
+            conn.execute(
+                text("ALTER TABLE reservation_request ADD COLUMN secondary_guest_name VARCHAR(255)")
+            )
+            conn.commit()
+        if "secondary_guest_email" not in cols:
+            conn.execute(
+                text("ALTER TABLE reservation_request ADD COLUMN secondary_guest_email VARCHAR(255)")
+            )
+            conn.commit()
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET reservation_for = 'SELF' "
+                "WHERE reservation_for IS NULL OR TRIM(COALESCE(reservation_for, '')) = ''"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET staying_person_count = 1 "
+                "WHERE staying_person_count IS NULL"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET primary_guest_name = requester_name "
+                "WHERE primary_guest_name IS NULL OR TRIM(COALESCE(primary_guest_name, '')) = ''"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET primary_guest_email = requester_email "
+                "WHERE primary_guest_email IS NULL OR TRIM(COALESCE(primary_guest_email, '')) = ''"
+            )
+        )
+        conn.commit()
+    logger.info("Migration: reservation_request guest / occupancy fields ensured")
+
+
+def _migrate_guest_fields_coherence() -> None:
+    """Align stored guest rows with app rules: SELF primary = requester; single occupancy has no second guest."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if not insp.has_table("reservation_request"):
+        return
+    cols = {c["name"] for c in insp.get_columns("reservation_request")}
+    needed = {
+        "reservation_for",
+        "staying_person_count",
+        "primary_guest_name",
+        "primary_guest_email",
+        "secondary_guest_name",
+        "secondary_guest_email",
+        "requester_name",
+        "requester_email",
+    }
+    if not needed.issubset(cols):
+        return
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET secondary_guest_name = NULL, "
+                "secondary_guest_email = NULL "
+                "WHERE COALESCE(staying_person_count, 1) = 1"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET primary_guest_name = TRIM(requester_name), "
+                "primary_guest_email = LOWER(TRIM(requester_email)) "
+                "WHERE reservation_for IS NULL OR TRIM(COALESCE(reservation_for, '')) = '' "
+                "OR reservation_for = 'SELF'"
+            )
+        )
+        conn.commit()
+    logger.info("Migration: guest fields coherence (SELF primary, clear second when 1 person)")
+
+
+def _migrate_reception_internal_note() -> None:
+    """Add reception-only internal note column (never exposed on employee APIs)."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if not insp.has_table("reservation_request"):
+        return
+    cols = {c["name"] for c in insp.get_columns("reservation_request")}
+    if "reception_internal_note" in cols:
+        return
+    with engine.connect() as conn:
+        conn.execute(
+            text("ALTER TABLE reservation_request ADD COLUMN reception_internal_note TEXT")
+        )
+        conn.commit()
+    logger.info("Migration: added reservation_request.reception_internal_note")
+
+
 def init_db() -> None:
     # Import models so SQLModel registers metadata
     from infrastructure import models  # noqa: F401
@@ -96,6 +219,9 @@ def init_db() -> None:
     SQLModel.metadata.create_all(get_engine())
     _migrate_add_reservation_user_id()
     _migrate_reservation_urgency_and_booking_flag()
+    _migrate_reservation_guest_fields()
+    _migrate_guest_fields_coherence()
+    _migrate_reception_internal_note()
     from application.auth_service import seed_bootstrap_users
 
     with Session(get_engine()) as session:

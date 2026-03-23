@@ -21,6 +21,10 @@
                         alt=""
                     />
                 </a>
+                <div class="brand-app-lines">
+                    <span class="brand-title">Rezervace hotelu</span>
+                    <span class="brand-sub">Zaměstnanec</span>
+                </div>
             </div>
             <nav class="nav-pill" id="main-nav" aria-label="Hlavní navigace"></nav>
         </div>
@@ -37,10 +41,74 @@
             <form id="reservation-form" novalidate>
                 <section class="form-section" aria-labelledby="sec-contact">
                     <h2 id="sec-contact" class="section-title">Kontakt</h2>
+                    <p class="form-hint" style="margin-top:-0.5rem;margin-bottom:1rem;">Vyplňte údaje osoby, která žádost podává (přihlášený uživatel).</p>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="requester_name">Jméno a příjmení <span class="required">*</span></label>
                             <input id="requester_name" name="requester_name" type="text" required autocomplete="name" placeholder="Např. Jana Nováková">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section" aria-labelledby="sec-for">
+                    <h2 id="sec-for" class="section-title">Pro koho je rezervace</h2>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-for">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="reservation_for" value="SELF" id="res_for_self" checked>
+                                    Pro mě
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="reservation_for" value="COLLEAGUE" id="res_for_colleague">
+                                    Pro jiného kolegu
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row" id="primary-guest-row" hidden>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <h3 class="form-subsection-title">Hlavní ubytovaná osoba</h3>
+                        </div>
+                        <div class="form-group">
+                            <label for="primary_guest_name">Jméno a příjmení <span class="required">*</span></label>
+                            <input id="primary_guest_name" name="primary_guest_name" type="text" autocomplete="name" placeholder="Jméno kolegy, pro kterého je pobyt">
+                        </div>
+                        <div class="form-group">
+                            <label for="primary_guest_email">E-mail <span class="required">*</span></label>
+                            <input id="primary_guest_email" name="primary_guest_email" type="email" autocomplete="email" placeholder="kolega@firma.cz">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section" aria-labelledby="sec-occupancy">
+                    <h2 id="sec-occupancy" class="section-title">Počet ubytovaných osob</h2>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-occupancy">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="staying_person_count" value="1" id="occ_1" checked>
+                                    1 osoba
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="staying_person_count" value="2" id="occ_2">
+                                    2 osoby
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section" aria-labelledby="sec-second-guest" id="secondary-guest-section" hidden>
+                    <h2 id="sec-second-guest" class="section-title">Druhá ubytovaná osoba</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="secondary_guest_name">Jméno a příjmení <span class="required">*</span></label>
+                            <input id="secondary_guest_name" name="secondary_guest_name" type="text" autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="secondary_guest_email">E-mail <span class="required">*</span></label>
+                            <input id="secondary_guest_email" name="secondary_guest_email" type="email" autocomplete="email">
                         </div>
                     </div>
                 </section>
@@ -89,7 +157,7 @@
                                 <option value="single">Jednolůžkový pokoj</option>
                                 <option value="multi">Dvoulůžkový pokoj</option>
                             </select>
-                            <span id="room-type-hint" class="form-hint">Jednolůžkový pokoj pro jednu osobu. U dvoulůžkového pokoje můžete níže volitelně upřesnit lůžka.</span>
+                            <span id="room-type-hint" class="form-hint">Počet osob je výše; typ pokoje zvolte zvlášť podle potřeby. U dvoulůžkového pokoje můžete níže volitelně upřesnit lůžka.</span>
                         </div>
                         <div class="form-group" id="bed-preference-group">
                             <label for="bed_preference">Rozložení lůžek</label>
@@ -109,24 +177,24 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <span id="sec-urgency" class="urgency-field-label">Urgence požadavku</span>
-                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-urgency">
+                            <span id="sec-priority" class="urgency-field-label">Priorita požadavku</span>
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-priority">
                                 <label class="urgency-radio-label">
                                     <input type="radio" name="urgency" value="STANDARD" id="urgency_standard" checked>
-                                    Standardní
+                                    Běžná
                                 </label>
                                 <label class="urgency-radio-label">
                                     <input type="radio" name="urgency" value="URGENT" id="urgency_urgent">
                                     Urgentní
                                 </label>
                             </div>
-                            <span class="form-hint">Urgentní označte jen tehdy, když je potřeba rychlejší vyřízení.</span>
+                            <span class="form-hint">Urgentní prioritu zvolte jen tehdy, když je potřeba rychlejší vyřízení.</span>
                         </div>
                     </div>
                     <div class="form-row" id="urgency-reason-row" hidden>
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <label for="urgency_reason">Důvod urgence <span class="required">*</span></label>
-                            <input id="urgency_reason" name="urgency_reason" type="text" maxlength="500" autocomplete="off" placeholder="Krátce proč je potřeba spěchat">
+                            <label for="urgency_reason">Důvod urgentní priority <span class="required">*</span></label>
+                            <input id="urgency_reason" name="urgency_reason" type="text" maxlength="500" autocomplete="off" placeholder="Krátce proč je žádost urgentní">
                         </div>
                     </div>
                 </section>
@@ -147,12 +215,12 @@
                 <span class="site-footer-phone">221 221 221</span>
             </div>
             <p class="site-footer-legal">
-                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+                Direct pojišťovna, a.s. · Interní aplikace — žádosti o rezervaci hotelu.
             </p>
         </div>
     </footer>
 
-    <script src="/js/common.js?v=3"></script>
+    <script src="/js/common.js?v=4"></script>
     <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
@@ -169,6 +237,7 @@
                 }
                 if (me.role === "RECEPTION") {
                     window.location.href = "/admin/requests";
+                    return;
                 }
             })();
 
@@ -180,6 +249,56 @@
             const submitBtn = document.getElementById("submit-btn");
             const urgencyReasonRow = document.getElementById("urgency-reason-row");
             const urgencyReasonInput = document.getElementById("urgency_reason");
+            const primaryGuestRow = document.getElementById("primary-guest-row");
+            const primaryGuestName = document.getElementById("primary_guest_name");
+            const primaryGuestEmail = document.getElementById("primary_guest_email");
+            const secondaryGuestSection = document.getElementById("secondary-guest-section");
+            const secondaryGuestName = document.getElementById("secondary_guest_name");
+            const secondaryGuestEmail = document.getElementById("secondary_guest_email");
+
+            function syncPrimaryGuestUi() {
+                const colleague = document.getElementById("res_for_colleague").checked;
+                if (colleague) {
+                    primaryGuestRow.removeAttribute("hidden");
+                    primaryGuestName.required = true;
+                    primaryGuestEmail.required = true;
+                } else {
+                    primaryGuestRow.setAttribute("hidden", "");
+                    primaryGuestName.required = false;
+                    primaryGuestEmail.required = false;
+                    primaryGuestName.value = "";
+                    primaryGuestEmail.value = "";
+                }
+            }
+
+            function syncSecondaryGuestUi() {
+                const two = document.getElementById("occ_2").checked;
+                if (two) {
+                    secondaryGuestSection.removeAttribute("hidden");
+                    secondaryGuestName.required = true;
+                    secondaryGuestEmail.required = true;
+                } else {
+                    secondaryGuestSection.setAttribute("hidden", "");
+                    secondaryGuestName.required = false;
+                    secondaryGuestEmail.required = false;
+                    secondaryGuestName.value = "";
+                    secondaryGuestEmail.value = "";
+                }
+            }
+
+            document.querySelectorAll('input[name="reservation_for"]').forEach((r) => {
+                r.addEventListener("change", () => {
+                    syncPrimaryGuestUi();
+                });
+            });
+            document.querySelectorAll('input[name="staying_person_count"]').forEach((r) => {
+                r.addEventListener("change", () => {
+                    syncSecondaryGuestUi();
+                });
+            });
+            syncPrimaryGuestUi();
+            syncSecondaryGuestUi();
+
             document.querySelectorAll('input[name="urgency"]').forEach((radio) => {
                 radio.addEventListener("change", () => {
                     const urgent = document.getElementById("urgency_urgent").checked;
@@ -301,14 +420,54 @@
                 const urgency = urgencyUrgent ? "URGENT" : "STANDARD";
                 const reasonRaw = urgencyReasonInput.value.trim();
                 if (urgencyUrgent && !reasonRaw) {
-                    showMessage("error", "U urgentní žádosti vyplňte důvod urgence.");
+                    showMessage("error", "U žádosti s urgentní prioritou vyplňte důvod.");
                     submitBtn.disabled = false;
                     urgencyReasonInput.focus();
                     return;
                 }
 
+                const reservationFor = document.querySelector(
+                    'input[name="reservation_for"]:checked'
+                ).value;
+                const stayingPersonCount = parseInt(
+                    document.querySelector('input[name="staying_person_count"]:checked').value,
+                    10
+                );
+
+                if (reservationFor === "COLLEAGUE") {
+                    if (!primaryGuestName.value.trim()) {
+                        showMessage("error", "Vyplňte jméno a příjmení hlavní ubytované osoby.");
+                        submitBtn.disabled = false;
+                        primaryGuestName.focus();
+                        return;
+                    }
+                    if (!primaryGuestEmail.value.trim()) {
+                        showMessage("error", "Vyplňte e-mail hlavní ubytované osoby.");
+                        submitBtn.disabled = false;
+                        primaryGuestEmail.focus();
+                        return;
+                    }
+                }
+
+                if (stayingPersonCount === 2) {
+                    if (!secondaryGuestName.value.trim()) {
+                        showMessage("error", "Vyplňte jméno a příjmení druhé ubytované osoby.");
+                        submitBtn.disabled = false;
+                        secondaryGuestName.focus();
+                        return;
+                    }
+                    if (!secondaryGuestEmail.value.trim()) {
+                        showMessage("error", "Vyplňte e-mail druhé ubytované osoby.");
+                        submitBtn.disabled = false;
+                        secondaryGuestEmail.focus();
+                        return;
+                    }
+                }
+
                 const body = {
                     requester_name: document.getElementById("requester_name").value.trim(),
+                    reservation_for: reservationFor,
+                    staying_person_count: stayingPersonCount,
                     city: cityRes.city,
                     date_from: dateFrom,
                     date_to: dateTo,
@@ -317,6 +476,15 @@
                     urgency,
                     urgency_reason: urgencyUrgent ? reasonRaw : null,
                 };
+
+                if (reservationFor === "COLLEAGUE") {
+                    body.primary_guest_name = primaryGuestName.value.trim();
+                    body.primary_guest_email = primaryGuestEmail.value.trim();
+                }
+                if (stayingPersonCount === 2) {
+                    body.secondary_guest_name = secondaryGuestName.value.trim();
+                    body.secondary_guest_email = secondaryGuestEmail.value.trim();
+                }
 
                 if (roomType.value === "multi") {
                     const bed = bedSelect.value;
@@ -340,6 +508,10 @@
                     form.reset();
                     resetCityFields();
                     toggleBedPreference();
+                    document.getElementById("res_for_self").checked = true;
+                    document.getElementById("occ_1").checked = true;
+                    syncPrimaryGuestUi();
+                    syncSecondaryGuestUi();
                     document.getElementById("urgency_standard").checked = true;
                     urgencyReasonRow.setAttribute("hidden", "");
                     urgencyReasonInput.required = false;

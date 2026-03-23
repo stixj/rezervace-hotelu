@@ -21,6 +21,10 @@
                         alt=""
                     />
                 </a>
+                <div class="brand-app-lines">
+                    <span class="brand-title">Rezervace hotelu</span>
+                    <span class="brand-sub">Zaměstnanec</span>
+                </div>
             </div>
             <nav class="nav-pill" id="main-nav" aria-label="Hlavní navigace"></nav>
         </div>
@@ -58,7 +62,7 @@
                 <span class="site-footer-phone">221 221 221</span>
             </div>
             <p class="site-footer-legal">
-                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+                Direct pojišťovna, a.s. · Interní aplikace — žádosti o rezervaci hotelu.
             </p>
         </div>
     </footer>
@@ -107,25 +111,23 @@
                 tbody.innerHTML = data
                     .map((r) => {
                         const idEnc = encodeURIComponent(r.id);
-                        const canEdit =
-                            r.status !== "BOOKED" && r.status !== "CANCELLED";
                         const canCancel = r.status !== "CANCELLED";
-                        const edit = canEdit
-                            ? `<a href="/app/requests/${idEnc}">Upravit</a>`
-                            : "—";
                         const cancel = canCancel
-                            ? ` <button type="button" class="linklike" data-cancel="${String(r.id)}" data-booked="${r.status === "BOOKED" ? "1" : ""}">Zrušit</button>`
+                            ? `<button type="button" class="linklike my-requests-cancel" data-cancel="${String(r.id)}" data-booked="${r.status === "BOOKED" ? "1" : ""}">Zrušit</button>`
                             : "";
                         const uChip = HotelCommon.urgencyChipHtml(
                             r.urgency,
                             r.urgency_reason
                         );
+                        const actionsInner = cancel
+                            ? `<a class="my-requests-detail-link" href="/app/requests/${idEnc}">Detail</a><span class="my-requests-action-sep" aria-hidden="true"></span>${cancel}`
+                            : `<a class="my-requests-detail-link" href="/app/requests/${idEnc}">Detail</a>`;
                         return `<tr>
               <td class="status-and-urgency-cell"><span class="status-pill" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span>${uChip}</td>
               <td>${HotelCommon.escapeHtml(r.city)}</td>
               <td>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</td>
               <td>${HotelCommon.escapeHtml(String(r.created_at || "").slice(0, 19))}</td>
-              <td class="actions-cell"><a href="/app/requests/${idEnc}">Detail</a> · ${edit}${cancel}</td>
+              <td class="actions-cell my-requests-actions">${actionsInner}</td>
             </tr>`;
                     })
                     .join("");

@@ -21,6 +21,10 @@
                         alt=""
                     />
                 </a>
+                <div class="brand-app-lines">
+                    <span class="brand-title">Rezervace hotelu</span>
+                    <span class="brand-sub">Recepce</span>
+                </div>
             </div>
             <nav class="nav-pill" id="main-nav" aria-label="Hlavní navigace"></nav>
         </div>
@@ -35,20 +39,67 @@
         <div id="request-priority-strip" class="request-priority-strip" hidden></div>
 
         <div class="form-container loaded request-detail-page" id="detail-block" hidden>
-            <div class="request-detail-columns">
-                <div class="request-detail-readonly">
-                    <section class="request-summary-block" aria-labelledby="request-summary-heading">
-                        <h2 id="request-summary-heading" class="request-panel-heading">Shrnutí žádosti</h2>
-                        <dl class="status-detail status-detail--summary" id="readonly-summary"></dl>
+            <section
+                class="request-priority-summary-section"
+                aria-labelledby="request-priority-summary-heading"
+            >
+                <h2 id="request-priority-summary-heading" class="request-panel-heading">
+                    Přehled
+                </h2>
+                <div id="readonly-priority"></div>
+            </section>
+
+            <div class="request-detail-body-grid">
+                <div class="request-detail-main-stack">
+                    <section class="request-people-block" aria-labelledby="request-people-heading">
+                        <h2 id="request-people-heading" class="request-panel-heading">Osoby</h2>
+                        <div class="request-people-cards" id="readonly-people"></div>
                     </section>
-                    <section class="request-meta-block" aria-labelledby="request-meta-heading">
-                        <h2 id="request-meta-heading" class="request-panel-heading">Další údaje</h2>
-                        <dl class="status-detail status-detail--meta" id="readonly-meta"></dl>
+
+                    <section class="request-stay-block" aria-labelledby="request-stay-heading">
+                        <h2 id="request-stay-heading" class="request-panel-heading">
+                            Pobyt
+                        </h2>
+                        <div id="readonly-stay"></div>
+                    </section>
+
+                    <section
+                        class="reception-internal-note-block"
+                        aria-labelledby="reception-internal-note-heading"
+                    >
+                        <h2
+                            id="reception-internal-note-heading"
+                            class="request-panel-heading reception-internal-note-block__title"
+                        >
+                            Interní poznámka recepce
+                        </h2>
+                        <p class="reception-internal-note-block__hint">
+                            Vidí jen recepce; v zaměstnanecké aplikaci se nezobrazuje.
+                        </p>
+                        <div class="form-group reception-internal-note-block__field">
+                            <textarea
+                                id="reception_internal_note"
+                                class="reception-internal-note-textarea"
+                                rows="5"
+                                maxlength="20000"
+                                aria-labelledby="reception-internal-note-heading"
+                                placeholder="Krátce si můžete zapsat domluvu s hotelem, další krok nebo cokoliv pro kolegy z recepce."
+                            ></textarea>
+                        </div>
+                        <div class="form-actions reception-internal-note-block__actions">
+                            <button type="button" class="ghost" id="save-reception-note-btn">
+                                Uložit poznámku
+                            </button>
+                        </div>
                     </section>
                 </div>
-                <div class="request-action-column">
+
+                <aside class="request-action-column" aria-label="Akce recepce">
                     <form id="status-form" class="form-section request-action-panel">
                         <h2 class="section-title request-action-panel__title">Změna stavu a rezervace</h2>
+                        <p class="request-action-panel__lead">
+                            Stav žádosti a údaje rezervace v hotelu nastavíte zde.
+                        </p>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="status">Stav <span class="required">*</span></label>
@@ -72,7 +123,7 @@
                             <button type="submit" class="cta" id="save-btn">Uložit</button>
                         </div>
                     </form>
-                </div>
+                </aside>
             </div>
         </div>
     </main>
@@ -84,12 +135,12 @@
                 <span class="site-footer-phone">221 221 221</span>
             </div>
             <p class="site-footer-legal">
-                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+                Direct pojišťovna, a.s. · Interní aplikace — žádosti o rezervaci hotelu.
             </p>
         </div>
     </footer>
 
-    <script src="/js/common.js?v=3"></script>
+    <script src="/js/common.js?v=6"></script>
     <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
@@ -109,12 +160,15 @@
             const msgEl = document.getElementById("page-message");
             const priorityStrip = document.getElementById("request-priority-strip");
             const block = document.getElementById("detail-block");
-            const readonlySummary = document.getElementById("readonly-summary");
-            const readonlyMeta = document.getElementById("readonly-meta");
+            const readonlyPriority = document.getElementById("readonly-priority");
+            const readonlyPeople = document.getElementById("readonly-people");
+            const readonlyStay = document.getElementById("readonly-stay");
             const form = document.getElementById("status-form");
             const statusEl = document.getElementById("status");
             const hotelEl = document.getElementById("hotel_name");
             const resNoEl = document.getElementById("reservation_number");
+            const receptionNoteEl = document.getElementById("reception_internal_note");
+            const saveReceptionNoteBtn = document.getElementById("save-reception-note-btn");
 
             function showMessage(type, html) {
                 msgEl.className = "message " + type;
@@ -145,30 +199,116 @@
                     return;
                 }
                 const r = data;
-                const urgencySummary =
+                const rf = r.reservation_for || "SELF";
+                const occ = Number(r.staying_person_count) || 1;
+                const prioritySummaryBlock =
                     r.urgency === "URGENT"
-                        ? `<dt>Urgence</dt><dd><span class="urgency-chip">Urgentní</span> — ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</dd>`
-                        : "";
-                readonlySummary.innerHTML = `
-          <dt>ID</dt><dd><code>${HotelCommon.escapeHtml(String(r.id))}</code></dd>
-          <dt>Stav</dt><dd><span class="status-pill status-pill--large" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span></dd>
-          ${urgencySummary}
-          <dt>Žadatel</dt><dd>${HotelCommon.escapeHtml(r.requester_name)} &lt;${HotelCommon.escapeHtml(r.requester_email)}&gt;</dd>
-          <dt>Město</dt><dd>${HotelCommon.escapeHtml(r.city)}</dd>
-          <dt>Termín</dt><dd>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</dd>
-          <dt>Typ pokoje</dt><dd>${HotelCommon.escapeHtml(r.room_type)}</dd>`;
-                readonlyMeta.innerHTML = `
-          <dt>Poznámka</dt><dd>${r.note ? HotelCommon.escapeHtml(r.note) : "—"}</dd>
-          <dt>Postele</dt><dd>${r.bed_preference ? HotelCommon.escapeHtml(r.bed_preference) : "—"}</dd>
-          <dt>Hotel / číslo (uloženo)</dt><dd>${r.hotel_name ? HotelCommon.escapeHtml(r.hotel_name) : "—"} / ${r.reservation_number ? HotelCommon.escapeHtml(r.reservation_number) : "—"}</dd>`;
+                        ? `<div class="request-priority-item request-priority-item--urgent">
+            <span class="request-priority-item__label">Priorita</span>
+            <div class="request-priority-item__value request-priority-item__value--stack">
+              <span class="urgency-chip" aria-label="Priorita: urgentní">Urgentní</span>
+              <span class="request-priority-urgency-reason">${HotelCommon.escapeHtml(r.urgency_reason || "—")}</span>
+            </div>
+          </div>`
+                        : `<div class="request-priority-item request-priority-item--secondary request-priority-item--standard-priority">
+            <span class="request-priority-item__label">Priorita</span>
+            <span class="request-priority-item__value request-priority-standard-value">Běžná</span>
+          </div>`;
+                readonlyPriority.innerHTML = `
+          <div class="request-priority-summary-card">
+            <p class="request-priority-summary__id">
+              <span class="request-priority-summary__id-label">Ref.</span>
+              <span class="request-priority-summary__id-value">${HotelCommon.escapeHtml(String(r.id))}</span>
+            </p>
+            <div class="request-priority-grid">
+              <div class="request-priority-item request-priority-item--status request-priority-item--key">
+                <span class="request-priority-item__label">Stav</span>
+                <span class="request-priority-item__value">
+                  <span class="status-pill status-pill--large" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span>
+                </span>
+              </div>
+              ${prioritySummaryBlock}
+              <div class="request-priority-item request-priority-item--secondary">
+                <span class="request-priority-item__label">Podáno</span>
+                <span class="request-priority-item__value request-submitted-detail">${HotelCommon.formatRequestSubmittedCs(r.created_at)}</span>
+              </div>
+              <div class="request-priority-item request-priority-item--key">
+                <span class="request-priority-item__label">Město</span>
+                <span class="request-priority-item__value">${HotelCommon.escapeHtml(r.city)}</span>
+              </div>
+              <div class="request-priority-item request-priority-item--dates request-priority-item--key">
+                <span class="request-priority-item__label">Termín pobytu</span>
+                <span class="request-priority-item__value">${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</span>
+              </div>
+              <div class="request-priority-item request-priority-item--key">
+                <span class="request-priority-item__label">Počet osob</span>
+                <span class="request-priority-item__value">${HotelCommon.escapeHtml(HotelCommon.stayingPersonCountLabel(occ))}</span>
+              </div>
+            </div>
+          </div>`;
+
+                let secondPersonCard = "";
+                if (occ === 2) {
+                    secondPersonCard = `
+          <article class="request-person-card">
+            <h3 class="request-person-card__role">Druhá ubytovaná osoba</h3>
+            <div class="request-person-card__body">${HotelCommon.formatGuestDetailHtml(r.secondary_guest_name, r.secondary_guest_email)}</div>
+          </article>`;
+                }
+                const primaryPersonClass =
+                    occ === 1
+                        ? "request-person-card request-person-card--primary-span"
+                        : "request-person-card";
+                readonlyPeople.innerHTML = `
+          <article class="request-person-card">
+            <h3 class="request-person-card__role">Žadatel (podává)</h3>
+            <div class="request-person-card__body">${HotelCommon.formatGuestDetailHtml(r.requester_name, r.requester_email)}</div>
+          </article>
+          <article class="request-person-card request-person-card--context">
+            <h3 class="request-person-card__role">Pro koho je rezervace</h3>
+            <div class="request-person-card__body">${HotelCommon.escapeHtml(HotelCommon.reservationForLabel(rf))}</div>
+          </article>
+          <article class="${primaryPersonClass}">
+            <h3 class="request-person-card__role">Hlavní ubytovaná osoba</h3>
+            <div class="request-person-card__body">${HotelCommon.formatGuestDetailHtml(r.primary_guest_name, r.primary_guest_email)}</div>
+          </article>
+          ${secondPersonCard}`;
+
+                const applicantNoteBody = r.note
+                    ? HotelCommon.escapeHtml(r.note)
+                    : "—";
+                readonlyStay.innerHTML = `
+          <div class="request-stay-layout">
+            <div class="request-stay-facts-grid" role="list">
+              <div class="request-stay-fact" role="listitem">
+                <span class="request-stay-fact__label">Typ pokoje</span>
+                <span class="request-stay-fact__value">${HotelCommon.escapeHtml(HotelCommon.roomTypeLabel(r.room_type))}</span>
+              </div>
+              <div class="request-stay-fact" role="listitem">
+                <span class="request-stay-fact__label">Rozložení lůžek</span>
+                <span class="request-stay-fact__value">${HotelCommon.escapeHtml(HotelCommon.bedPreferenceLabel(r.bed_preference))}</span>
+              </div>
+              <div class="request-stay-fact" role="listitem">
+                <span class="request-stay-fact__label">Hotel a číslo rezervace</span>
+                <span class="request-stay-fact__value">${r.hotel_name ? HotelCommon.escapeHtml(r.hotel_name) : "—"} / ${r.reservation_number ? HotelCommon.escapeHtml(r.reservation_number) : "—"}</span>
+              </div>
+            </div>
+            <div class="request-applicant-note-readonly" aria-labelledby="applicant-note-readonly-heading">
+              <h3 id="applicant-note-readonly-heading" class="request-applicant-note-readonly__title">
+                Co napsal žadatel
+              </h3>
+              <div class="request-applicant-note-readonly__body">${applicantNoteBody}</div>
+            </div>
+          </div>`;
 
                 statusEl.value = r.status;
                 hotelEl.value = r.hotel_name || "";
                 resNoEl.value = r.reservation_number || "";
+                receptionNoteEl.value = r.reception_internal_note != null ? r.reception_internal_note : "";
                 const stripParts = [];
                 if (r.urgency === "URGENT") {
                     stripParts.push(
-                        `<div class="priority-strip-row priority-strip-row--urgent"><strong>Urgentní.</strong> ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</div>`
+                        `<div class="priority-strip-row priority-strip-row--urgent"><strong>Priorita urgentní.</strong> ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</div>`
                     );
                 }
                 if (r.status === "CANCELLED" && r.was_ever_booked === true) {
@@ -184,6 +324,29 @@
                     priorityStrip.hidden = true;
                 }
                 block.hidden = false;
+
+                saveReceptionNoteBtn.addEventListener("click", async () => {
+                    saveReceptionNoteBtn.disabled = true;
+                    const raw = receptionNoteEl.value;
+                    const trimmed = raw.trim();
+                    const body = {
+                        reception_internal_note: trimmed === "" ? null : raw,
+                    };
+                    const { res: nr, data: nd } = await HotelAuth.apiJson(
+                        "/admin/reservations/" +
+                            encodeURIComponent(rid) +
+                            "/reception-internal-note",
+                        { method: "PUT", body: JSON.stringify(body) }
+                    );
+                    saveReceptionNoteBtn.disabled = false;
+                    if (!nr.ok) {
+                        showMessage("error", HotelCommon.parseErrorDetail(nd));
+                        return;
+                    }
+                    receptionNoteEl.value =
+                        nd.reception_internal_note != null ? nd.reception_internal_note : "";
+                    showMessage("success", "Poznámka uložena.");
+                });
 
                 form.addEventListener("submit", async (e) => {
                     e.preventDefault();

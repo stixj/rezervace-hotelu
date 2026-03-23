@@ -21,6 +21,10 @@
                         alt=""
                     />
                 </a>
+                <div class="brand-app-lines">
+                    <span class="brand-title">Rezervace hotelu</span>
+                    <span class="brand-sub">Zaměstnanec</span>
+                </div>
             </div>
             <nav class="nav-pill" id="main-nav" aria-label="Hlavní navigace"></nav>
         </div>
@@ -32,27 +36,93 @@
 
         <div id="page-message" class="message" hidden role="status"></div>
 
-        <div class="form-container loaded" id="detail-readonly" hidden>
-            <dl class="status-detail" id="readonly-dl"></dl>
-        </div>
-
-        <div class="form-container loaded" id="booked-cancel-block" hidden>
-            <div class="form-actions">
-                <button type="button" class="ghost" id="cancel-booked-btn">Zrušit žádost</button>
+        <div class="form-container loaded user-detail-meta" id="detail-meta" hidden>
+            <div class="user-detail-status-row">
+                <span id="detail-status-pill-slot"></span>
+                <span id="detail-urgency-slot"></span>
             </div>
-            <p class="form-hint">U již potvrzené rezervace zrušení žádosti informuje recepci; storno u hotelu vyřídí recepce.</p>
+            <p class="user-detail-hint" id="detail-system-hint"></p>
         </div>
 
-        <div class="form-container" id="detail-edit" hidden>
+        <div class="form-container loaded user-detail-readonly-wrap" id="detail-readonly" hidden>
+            <dl class="status-detail user-detail-dl" id="readonly-dl"></dl>
+        </div>
+
+        <div class="form-container loaded user-detail-standalone-cancel" id="detail-standalone-cancel" hidden>
+            <div class="form-actions user-detail-cancel-actions">
+                <button type="button" class="ghost" id="cancel-standalone-btn">Zrušit žádost</button>
+            </div>
+            <p class="form-hint" id="cancel-booked-followup" hidden>
+                U již potvrzené rezervace zrušení žádosti informuje recepci; storno u hotelu vyřídí recepce.
+            </p>
+        </div>
+
+        <div class="form-container user-detail-edit-wrap" id="detail-edit" hidden>
             <form id="edit-form" novalidate>
                 <section class="form-section">
-                    <h2 class="section-title">Úprava</h2>
+                    <h2 class="section-title">Údaje žádosti</h2>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="requester_name">Jméno a příjmení <span class="required">*</span></label>
+                            <label for="requester_name">Jméno a příjmení (podávající) <span class="required">*</span></label>
                             <input id="requester_name" name="requester_name" type="text" required>
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <span id="sec-for-edit" class="urgency-field-label">Pro koho je rezervace</span>
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-for-edit">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="reservation_for" value="SELF" id="res_for_self_edit">
+                                    Pro mě
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="reservation_for" value="COLLEAGUE" id="res_for_colleague_edit">
+                                    Pro jiného kolegu
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row" id="primary-guest-row-edit" hidden>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <h3 class="form-subsection-title">Hlavní ubytovaná osoba</h3>
+                        </div>
+                        <div class="form-group">
+                            <label for="primary_guest_name">Jméno a příjmení <span class="required">*</span></label>
+                            <input id="primary_guest_name" name="primary_guest_name" type="text" autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="primary_guest_email">E-mail <span class="required">*</span></label>
+                            <input id="primary_guest_email" name="primary_guest_email" type="email" autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <span id="sec-occupancy-edit" class="urgency-field-label">Počet ubytovaných osob</span>
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-occupancy-edit">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="staying_person_count" value="1" id="occ_1_edit">
+                                    1 osoba
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="staying_person_count" value="2" id="occ_2_edit">
+                                    2 osoby
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <section class="form-section" style="margin:0;padding:0;border:none;" id="secondary-guest-section-edit" hidden aria-labelledby="sec-second-guest-edit">
+                        <h3 id="sec-second-guest-edit" class="form-subsection-title">Druhá ubytovaná osoba</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="secondary_guest_name">Jméno a příjmení <span class="required">*</span></label>
+                                <input id="secondary_guest_name" name="secondary_guest_name" type="text" autocomplete="name">
+                            </div>
+                            <div class="form-group">
+                                <label for="secondary_guest_email">E-mail <span class="required">*</span></label>
+                                <input id="secondary_guest_email" name="secondary_guest_email" type="email" autocomplete="email">
+                            </div>
+                        </div>
+                    </section>
                     <div class="form-row">
                         <div class="form-group" id="city-preset-group">
                             <label for="city_preset">Město <span class="required">*</span></label>
@@ -92,12 +162,12 @@
                         <div class="form-group">
                             <label for="room_type">Typ pokoje <span class="required">*</span></label>
                             <select id="room_type" name="room_type" required>
-                                <option value="single">Jednolůžkový</option>
-                                <option value="multi">Vícelůžkový</option>
+                                <option value="single">Jednolůžkový pokoj</option>
+                                <option value="multi">Dvoulůžkový pokoj</option>
                             </select>
                         </div>
                         <div class="form-group" id="bed-preference-group">
-                            <label for="bed_preference">Postele (vícelůžkový)</label>
+                            <label for="bed_preference">Rozložení lůžek</label>
                             <select id="bed_preference" name="bed_preference">
                                 <option value="">Bez preference</option>
                                 <option value="double">Manželská postel</option>
@@ -127,12 +197,12 @@
                 <span class="site-footer-phone">221 221 221</span>
             </div>
             <p class="site-footer-legal">
-                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+                Direct pojišťovna, a.s. · Interní aplikace — žádosti o rezervaci hotelu.
             </p>
         </div>
     </footer>
 
-    <script src="/js/common.js?v=3"></script>
+    <script src="/js/common.js?v=5"></script>
     <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
@@ -150,9 +220,14 @@
             }
 
             const msgEl = document.getElementById("page-message");
+            const metaBox = document.getElementById("detail-meta");
+            const statusPillSlot = document.getElementById("detail-status-pill-slot");
+            const urgencySlot = document.getElementById("detail-urgency-slot");
+            const systemHintEl = document.getElementById("detail-system-hint");
             const readonlyBox = document.getElementById("detail-readonly");
             const readonlyDl = document.getElementById("readonly-dl");
-            const bookedCancelBlock = document.getElementById("booked-cancel-block");
+            const standaloneCancelBlock = document.getElementById("detail-standalone-cancel");
+            const cancelBookedFollowup = document.getElementById("cancel-booked-followup");
             const editBox = document.getElementById("detail-edit");
             const form = document.getElementById("edit-form");
             const roomType = document.getElementById("room_type");
@@ -163,6 +238,45 @@
             const cityOther = document.getElementById("city_other");
             const cityPresetGroup = document.getElementById("city-preset-group");
             const cityOtherGroup = document.getElementById("city-other-group");
+            const primaryGuestRowEdit = document.getElementById("primary-guest-row-edit");
+            const primaryGuestNameEdit = document.getElementById("primary_guest_name");
+            const primaryGuestEmailEdit = document.getElementById("primary_guest_email");
+            const secondaryGuestSectionEdit = document.getElementById("secondary-guest-section-edit");
+            const secondaryGuestNameEdit = document.getElementById("secondary_guest_name");
+            const secondaryGuestEmailEdit = document.getElementById("secondary_guest_email");
+
+            function syncPrimaryGuestUiEdit() {
+                const colleague = document.getElementById("res_for_colleague_edit").checked;
+                if (colleague) {
+                    primaryGuestRowEdit.removeAttribute("hidden");
+                    primaryGuestNameEdit.required = true;
+                    primaryGuestEmailEdit.required = true;
+                } else {
+                    primaryGuestRowEdit.setAttribute("hidden", "");
+                    primaryGuestNameEdit.required = false;
+                    primaryGuestEmailEdit.required = false;
+                }
+            }
+
+            function syncSecondaryGuestUiEdit() {
+                const two = document.getElementById("occ_2_edit").checked;
+                if (two) {
+                    secondaryGuestSectionEdit.removeAttribute("hidden");
+                    secondaryGuestNameEdit.required = true;
+                    secondaryGuestEmailEdit.required = true;
+                } else {
+                    secondaryGuestSectionEdit.setAttribute("hidden", "");
+                    secondaryGuestNameEdit.required = false;
+                    secondaryGuestEmailEdit.required = false;
+                }
+            }
+
+            document.querySelectorAll('#edit-form input[name="reservation_for"]').forEach((el) => {
+                el.addEventListener("change", syncPrimaryGuestUiEdit);
+            });
+            document.querySelectorAll('#edit-form input[name="staying_person_count"]').forEach((el) => {
+                el.addEventListener("change", syncSecondaryGuestUiEdit);
+            });
 
             function syncCityOtherField() {
                 const isOther = cityPreset.value === "__other__";
@@ -236,20 +350,41 @@
 
             roomType.addEventListener("change", toggleBedPreference);
 
+            const SYSTEM_HINTS = {
+                NEW: "Žádost můžete upravit nebo zrušit, dokud není rezervace uzavřena.",
+                IN_PROGRESS: "Tato žádost už není editovatelná.",
+                BOOKED: "Pro úpravy už kontaktujte recepci. Žádost můžete ještě zrušit.",
+                CANCELLED: "Tato žádost je uzavřená a již ji nelze měnit.",
+            };
+
+            function renderMeta(r) {
+                statusPillSlot.innerHTML = `<span class="status-pill status-pill--large" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span>`;
+                urgencySlot.innerHTML = HotelCommon.urgencyChipHtml(
+                    r.urgency,
+                    r.urgency_reason
+                );
+                systemHintEl.textContent = SYSTEM_HINTS[r.status] || "";
+                metaBox.hidden = false;
+            }
+
             function renderReadonly(r) {
-                const urgencyBlock =
-                    r.urgency === "URGENT"
-                        ? `<dt>Urgence</dt><dd><span class="urgency-chip">Urgentní</span> — ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</dd>`
-                        : "";
+                const rf = r.reservation_for || "SELF";
+                const occ = Number(r.staying_person_count) || 1;
+                let secondBlock = "";
+                if (occ === 2) {
+                    secondBlock = `
+          <dt>Druhá ubytovaná osoba</dt><dd>${HotelCommon.formatGuestDetailHtml(r.secondary_guest_name, r.secondary_guest_email)}</dd>`;
+                }
                 readonlyDl.innerHTML = `
-          <dt>Stav</dt><dd><span class="status-pill" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span></dd>
-          ${urgencyBlock}
-          <dt>E-mail žadatele</dt><dd>${HotelCommon.escapeHtml(r.requester_email)}</dd>
-          <dt>Jméno</dt><dd>${HotelCommon.escapeHtml(r.requester_name)}</dd>
+          <dt>Žadatel (podává)</dt><dd>${HotelCommon.escapeHtml(r.requester_name)} &lt;${HotelCommon.escapeHtml(r.requester_email)}&gt;</dd>
+          <dt>Pro koho je rezervace</dt><dd>${HotelCommon.escapeHtml(HotelCommon.reservationForLabel(rf))}</dd>
+          <dt>Počet ubytovaných osob</dt><dd>${HotelCommon.escapeHtml(HotelCommon.stayingPersonCountLabel(occ))}</dd>
+          <dt>Hlavní ubytovaná osoba</dt><dd>${HotelCommon.formatGuestDetailHtml(r.primary_guest_name, r.primary_guest_email)}</dd>
+          ${secondBlock}
           <dt>Město</dt><dd>${HotelCommon.escapeHtml(r.city)}</dd>
           <dt>Termín</dt><dd>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</dd>
-          <dt>Typ pokoje</dt><dd>${HotelCommon.escapeHtml(r.room_type)}</dd>
-          <dt>Postele</dt><dd>${r.bed_preference ? HotelCommon.escapeHtml(r.bed_preference) : "—"}</dd>
+          <dt>Typ pokoje</dt><dd>${HotelCommon.escapeHtml(HotelCommon.roomTypeLabel(r.room_type))}</dd>
+          <dt>Rozložení lůžek</dt><dd>${HotelCommon.escapeHtml(HotelCommon.bedPreferenceLabel(r.bed_preference))}</dd>
           <dt>Poznámka</dt><dd>${r.note ? HotelCommon.escapeHtml(r.note) : "—"}</dd>
           <dt>Hotel / číslo</dt><dd>${r.hotel_name ? HotelCommon.escapeHtml(r.hotel_name) : "—"} / ${r.reservation_number ? HotelCommon.escapeHtml(r.reservation_number) : "—"}</dd>`;
                 readonlyBox.hidden = false;
@@ -257,6 +392,22 @@
 
             function fillForm(r) {
                 document.getElementById("requester_name").value = r.requester_name;
+                const rf = r.reservation_for || "SELF";
+                if (rf === "COLLEAGUE") {
+                    document.getElementById("res_for_colleague_edit").checked = true;
+                } else {
+                    document.getElementById("res_for_self_edit").checked = true;
+                }
+                const occ = Number(r.staying_person_count) || 1;
+                if (occ === 2) {
+                    document.getElementById("occ_2_edit").checked = true;
+                } else {
+                    document.getElementById("occ_1_edit").checked = true;
+                }
+                primaryGuestNameEdit.value = r.primary_guest_name || "";
+                primaryGuestEmailEdit.value = r.primary_guest_email || "";
+                secondaryGuestNameEdit.value = r.secondary_guest_name || "";
+                secondaryGuestEmailEdit.value = r.secondary_guest_email || "";
                 applyCityFromSaved(r.city);
                 document.getElementById("date_from").value = r.date_from;
                 document.getElementById("date_to").value = r.date_to;
@@ -264,6 +415,8 @@
                 bedSelect.value = r.bed_preference || "";
                 document.getElementById("note").value = r.note || "";
                 toggleBedPreference();
+                syncPrimaryGuestUiEdit();
+                syncSecondaryGuestUiEdit();
             }
 
             (async () => {
@@ -286,12 +439,22 @@
                 const r = data;
                 const isCancelled = r.status === "CANCELLED";
                 const isBooked = r.status === "BOOKED";
-                renderReadonly(r);
-                bookedCancelBlock.hidden = !isBooked;
+                const isNew = r.status === "NEW";
+                const isInProgress = r.status === "IN_PROGRESS";
 
-                function wireCancelButton(btn) {
+                renderMeta(r);
+
+                readonlyBox.hidden = isNew;
+                if (!isNew) {
+                    renderReadonly(r);
+                }
+
+                standaloneCancelBlock.hidden = !(isInProgress || isBooked);
+                cancelBookedFollowup.hidden = !isBooked;
+
+                function wireCancelButton(btn, bookedFlow) {
                     btn.addEventListener("click", async () => {
-                        const msg = isBooked
+                        const msg = bookedFlow
                             ? "Opravdu zrušit tuto již potvrzenou rezervaci? Recepce bude informována."
                             : "Opravdu zrušit tuto žádost?";
                         if (!confirm(msg)) {
@@ -312,10 +475,21 @@
                 if (isCancelled) {
                     return;
                 }
-                if (isBooked) {
-                    wireCancelButton(document.getElementById("cancel-booked-btn"));
+                if (isInProgress || isBooked) {
+                    wireCancelButton(
+                        document.getElementById("cancel-standalone-btn"),
+                        isBooked
+                    );
                     return;
                 }
+                if (!isNew) {
+                    showMessage(
+                        "error",
+                        "Nepodporovaný stav žádosti. Kontaktujte prosím administrátora."
+                    );
+                    return;
+                }
+
                 fillForm(r);
                 editBox.hidden = false;
 
@@ -340,14 +514,56 @@
                         showMessage("error", cityRes.message);
                         return;
                     }
+                    const reservationFor = document.querySelector(
+                        '#edit-form input[name="reservation_for"]:checked'
+                    ).value;
+                    const stayingPersonCount = parseInt(
+                        document.querySelector('#edit-form input[name="staying_person_count"]:checked')
+                            .value,
+                        10
+                    );
+                    if (reservationFor === "COLLEAGUE") {
+                        if (!primaryGuestNameEdit.value.trim()) {
+                            showMessage("error", "Vyplňte jméno a příjmení hlavní ubytované osoby.");
+                            primaryGuestNameEdit.focus();
+                            return;
+                        }
+                        if (!primaryGuestEmailEdit.value.trim()) {
+                            showMessage("error", "Vyplňte e-mail hlavní ubytované osoby.");
+                            primaryGuestEmailEdit.focus();
+                            return;
+                        }
+                    }
+                    if (stayingPersonCount === 2) {
+                        if (!secondaryGuestNameEdit.value.trim()) {
+                            showMessage("error", "Vyplňte jméno a příjmení druhé ubytované osoby.");
+                            secondaryGuestNameEdit.focus();
+                            return;
+                        }
+                        if (!secondaryGuestEmailEdit.value.trim()) {
+                            showMessage("error", "Vyplňte e-mail druhé ubytované osoby.");
+                            secondaryGuestEmailEdit.focus();
+                            return;
+                        }
+                    }
                     const body = {
                         requester_name: document.getElementById("requester_name").value.trim(),
+                        reservation_for: reservationFor,
+                        staying_person_count: stayingPersonCount,
                         city: cityRes.city,
                         date_from: dateFrom,
                         date_to: dateTo,
                         room_type: roomType.value,
                         note: document.getElementById("note").value.trim() || null,
                     };
+                    if (reservationFor === "COLLEAGUE") {
+                        body.primary_guest_name = primaryGuestNameEdit.value.trim();
+                        body.primary_guest_email = primaryGuestEmailEdit.value.trim();
+                    }
+                    if (stayingPersonCount === 2) {
+                        body.secondary_guest_name = secondaryGuestNameEdit.value.trim();
+                        body.secondary_guest_email = secondaryGuestEmailEdit.value.trim();
+                    }
                     if (roomType.value === "multi") {
                         body.bed_preference = bedSelect.value || null;
                     } else {
@@ -364,7 +580,7 @@
                     window.location.href = "/app/my-requests";
                 });
 
-                wireCancelButton(document.getElementById("cancel-btn"));
+                wireCancelButton(document.getElementById("cancel-btn"), false);
             })();
         })();
     </script>
