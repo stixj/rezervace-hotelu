@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recepce – žádosti</title>
+    <link rel="stylesheet" href="/css/direct-theme.css">
+    <script src="/js/config.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="brand-block">
+                <a href="/app/new" class="brand-direct-link" aria-label="Direct pojišťovna">
+                    <img
+                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        class="brand-direct-logo"
+                        data-brand-logo="/Loga/Logo-negativni-RGB.png"
+                        width="174"
+                        height="32"
+                        alt=""
+                    />
+                </a>
+            </div>
+            <nav class="nav-pill" id="main-nav" aria-label="Hlavní navigace"></nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <h1 class="page-title">Všechny žádosti</h1>
+        <p class="page-lead">Filtrování podle stavu.</p>
+
+        <div class="form-container loaded" style="margin-bottom: 1rem;">
+            <form id="filter-form" class="form-row" style="align-items: flex-end;">
+                <div class="form-group">
+                    <label for="status-filter">Stav</label>
+                    <select id="status-filter" name="status">
+                        <option value="">Všechny</option>
+                        <option value="NEW">NEW</option>
+                        <option value="IN_PROGRESS">IN_PROGRESS</option>
+                        <option value="BOOKED">BOOKED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <button type="submit" class="ghost">Filtrovat</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="list-message" class="message" hidden role="status"></div>
+
+        <div class="form-container loaded">
+            <div class="table-wrap">
+                <table class="data-table" id="requests-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="sort-cell">
+                                <button type="button" class="th-sort" data-sort="status" aria-label="Řadit podle stavu">
+                                    Stav<span class="sort-ind" aria-hidden="true"></span>
+                                </button>
+                            </th>
+                            <th scope="col" class="sort-cell">
+                                <button type="button" class="th-sort" data-sort="requester_name" aria-label="Řadit podle žadatele">
+                                    Žadatel<span class="sort-ind" aria-hidden="true"></span>
+                                </button>
+                            </th>
+                            <th scope="col" class="sort-cell">
+                                <button type="button" class="th-sort" data-sort="requester_email" aria-label="Řadit podle e-mailu">
+                                    E-mail<span class="sort-ind" aria-hidden="true"></span>
+                                </button>
+                            </th>
+                            <th scope="col" class="sort-cell">
+                                <button type="button" class="th-sort" data-sort="city" aria-label="Řadit podle města">
+                                    Město<span class="sort-ind" aria-hidden="true"></span>
+                                </button>
+                            </th>
+                            <th scope="col" class="sort-cell">
+                                <button type="button" class="th-sort" data-sort="term" aria-label="Řadit podle termínu">
+                                    Termín<span class="sort-ind" aria-hidden="true"></span>
+                                </button>
+                            </th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="requests-body"></tbody>
+                </table>
+            </div>
+            <p id="empty-hint" class="page-lead" hidden>Žádné záznamy.</p>
+        </div>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+        <div class="site-footer-inner">
+            <div class="site-footer-left">
+                <a href="https://www.direct.cz" class="site-footer-site" target="_blank" rel="noopener noreferrer">direct.cz</a>
+                <span class="site-footer-phone">221 221 221</span>
+            </div>
+            <p class="site-footer-legal">
+                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+            </p>
+        </div>
+    </footer>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/nav.js"></script>
+    <script>
+        (function () {
+            if (!HotelAuth.getToken()) {
+                window.location.href = "/login";
+                return;
+            }
+
+            const tbody = document.getElementById("requests-body");
+            const msgEl = document.getElementById("list-message");
+            const emptyHint = document.getElementById("empty-hint");
+            const filterForm = document.getElementById("filter-form");
+            const statusFilter = document.getElementById("status-filter");
+            const requestsTable = document.getElementById("requests-table");
+
+            /** @type {object[]} */
+            let listData = [];
+            /** @type {string|null} */
+            let sortKey = null;
+            /** @type {'asc'|'desc'} */
+            let sortDir = "asc";
+
+            const STATUS_RANK = {
+                NEW: 0,
+                IN_PROGRESS: 1,
+                BOOKED: 2,
+                CANCELLED: 3,
+            };
+
+            function showMessage(type, html) {
+                msgEl.className = "message " + type;
+                msgEl.innerHTML = html;
+                msgEl.hidden = false;
+            }
+
+            function compareRows(a, b, key, dir) {
+                const mul = dir === "asc" ? 1 : -1;
+                let cmp = 0;
+                if (key === "status") {
+                    cmp =
+                        (STATUS_RANK[a.status] ?? 99) - (STATUS_RANK[b.status] ?? 99);
+                } else if (key === "requester_name") {
+                    cmp = a.requester_name.localeCompare(b.requester_name, "cs", {
+                        sensitivity: "base",
+                    });
+                } else if (key === "requester_email") {
+                    cmp = a.requester_email.localeCompare(b.requester_email, undefined, {
+                        sensitivity: "base",
+                    });
+                } else if (key === "city") {
+                    cmp = String(a.city).localeCompare(String(b.city), "cs", {
+                        sensitivity: "base",
+                    });
+                } else if (key === "term") {
+                    cmp = String(a.date_from).localeCompare(String(b.date_from));
+                    if (cmp === 0) {
+                        cmp = String(a.date_to).localeCompare(String(b.date_to));
+                    }
+                }
+                return cmp * mul;
+            }
+
+            function sortedRows() {
+                if (!sortKey) {
+                    return listData.slice();
+                }
+                return [...listData].sort((a, b) =>
+                    compareRows(a, b, sortKey, sortDir)
+                );
+            }
+
+            function updateSortIndicators() {
+                document.querySelectorAll(".th-sort").forEach((btn) => {
+                    const key = btn.getAttribute("data-sort");
+                    const ind = btn.querySelector(".sort-ind");
+                    if (key === sortKey) {
+                        btn.setAttribute(
+                            "aria-sort",
+                            sortDir === "asc" ? "ascending" : "descending"
+                        );
+                        btn.setAttribute(
+                            "title",
+                            sortDir === "asc"
+                                ? "Seřazeno vzestupně — klikněte pro sestupně"
+                                : "Seřazeno sestupně — klikněte pro vzestupně"
+                        );
+                        if (ind) {
+                            ind.textContent = sortDir === "asc" ? "▲" : "▼";
+                        }
+                    } else {
+                        btn.removeAttribute("aria-sort");
+                        btn.removeAttribute("title");
+                        if (ind) {
+                            ind.textContent = "";
+                        }
+                    }
+                });
+            }
+
+            function renderTable() {
+                if (!listData.length) {
+                    emptyHint.hidden = false;
+                    requestsTable.hidden = true;
+                    tbody.innerHTML = "";
+                    updateSortIndicators();
+                    return;
+                }
+                emptyHint.hidden = true;
+                requestsTable.hidden = false;
+                const rows = sortedRows();
+                tbody.innerHTML = rows
+                    .map((r) => {
+                        const idEnc = encodeURIComponent(r.id);
+                        return `<tr>
+              <td><span class="status-pill">${HotelCommon.escapeHtml(r.status)}</span></td>
+              <td>${HotelCommon.escapeHtml(r.requester_name)}</td>
+              <td>${HotelCommon.escapeHtml(r.requester_email)}</td>
+              <td>${HotelCommon.escapeHtml(r.city)}</td>
+              <td>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</td>
+              <td><a href="/admin/requests/${idEnc}">Detail</a></td>
+            </tr>`;
+                    })
+                    .join("");
+                updateSortIndicators();
+            }
+
+            async function loadList() {
+                msgEl.hidden = true;
+                const q = statusFilter.value
+                    ? "?status=" + encodeURIComponent(statusFilter.value)
+                    : "";
+                const { res, data } = await HotelAuth.apiJson("/admin/reservations" + q);
+                if (res.status === 403) {
+                    showMessage("error", "Přístup pouze pro roli recepce.");
+                    return;
+                }
+                if (!res.ok) {
+                    showMessage("error", HotelCommon.parseErrorDetail(data));
+                    return;
+                }
+                listData = Array.isArray(data) ? data : [];
+                renderTable();
+            }
+
+            document.querySelectorAll(".th-sort").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const key = btn.getAttribute("data-sort");
+                    if (!key || !listData.length) {
+                        return;
+                    }
+                    if (sortKey === key) {
+                        sortDir = sortDir === "asc" ? "desc" : "asc";
+                    } else {
+                        sortKey = key;
+                        sortDir = "asc";
+                    }
+                    renderTable();
+                });
+            });
+
+            filterForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                loadList();
+            });
+
+            (async () => {
+                const meRes = await fetch(
+                    (window.__API_BASE__ ?? "") + "/auth/me",
+                    {
+                        headers: {
+                            Authorization: "Bearer " + HotelAuth.getToken(),
+                        },
+                    }
+                );
+                const me = await meRes.json().catch(() => ({}));
+                if (!meRes.ok || me.role !== "RECEPTION") {
+                    window.location.href = "/app/new";
+                    return;
+                }
+                await loadList();
+            })();
+        })();
+    </script>
+</body>
+</html>

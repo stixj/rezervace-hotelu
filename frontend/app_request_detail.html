@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail žádosti – Rezervace hotelu</title>
+    <link rel="stylesheet" href="/css/direct-theme.css">
+    <script src="/js/config.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="brand-block">
+                <a href="/app/new" class="brand-direct-link" aria-label="Direct pojišťovna">
+                    <img
+                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        class="brand-direct-logo"
+                        data-brand-logo="/Loga/Logo-negativni-RGB.png"
+                        width="174"
+                        height="32"
+                        alt=""
+                    />
+                </a>
+            </div>
+            <nav class="nav-pill" id="main-nav" aria-label="Hlavní navigace"></nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <h1 class="page-title">Detail žádosti</h1>
+        <p class="page-lead"><a href="/app/my-requests">← Zpět na seznam</a></p>
+
+        <div id="page-message" class="message" hidden role="status"></div>
+
+        <div class="form-container loaded" id="detail-readonly" hidden>
+            <dl class="status-detail" id="readonly-dl"></dl>
+        </div>
+
+        <div class="form-container" id="detail-edit" hidden>
+            <form id="edit-form" novalidate>
+                <section class="form-section">
+                    <h2 class="section-title">Úprava</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="requester_name">Jméno a příjmení <span class="required">*</span></label>
+                            <input id="requester_name" name="requester_name" type="text" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">Město <span class="required">*</span></label>
+                            <select id="city" name="city" required>
+                                <option value="Praha">Praha</option>
+                                <option value="Brno">Brno</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="date_from">Datum příjezdu <span class="required">*</span></label>
+                            <input id="date_from" name="date_from" type="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="date_to">Datum odjezdu <span class="required">*</span></label>
+                            <input id="date_to" name="date_to" type="date" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="room_type">Typ pokoje <span class="required">*</span></label>
+                            <select id="room_type" name="room_type" required>
+                                <option value="single">Jednolůžkový</option>
+                                <option value="multi">Vícelůžkový</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="bed-preference-group">
+                            <label for="bed_preference">Postele (vícelůžkový)</label>
+                            <select id="bed_preference" name="bed_preference">
+                                <option value="">Bez preference</option>
+                                <option value="double">Manželská postel</option>
+                                <option value="twin">Oddělená lůžka</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="note">Poznámka</label>
+                            <textarea id="note" name="note"></textarea>
+                        </div>
+                    </div>
+                </section>
+                <div class="form-actions">
+                    <button type="submit" class="cta" id="save-btn">Uložit změny</button>
+                    <button type="button" class="ghost" id="cancel-btn">Zrušit žádost</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+        <div class="site-footer-inner">
+            <div class="site-footer-left">
+                <a href="https://www.direct.cz" class="site-footer-site" target="_blank" rel="noopener noreferrer">direct.cz</a>
+                <span class="site-footer-phone">221 221 221</span>
+            </div>
+            <p class="site-footer-legal">
+                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+            </p>
+        </div>
+    </footer>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/nav.js"></script>
+    <script>
+        (function () {
+            if (!HotelAuth.getToken()) {
+                window.location.href = "/login";
+                return;
+            }
+
+            const m = window.location.pathname.match(/\/app\/requests\/([^/]+)/);
+            const rid = m ? m[1] : null;
+            if (!rid) {
+                window.location.href = "/app/my-requests";
+                return;
+            }
+
+            const msgEl = document.getElementById("page-message");
+            const readonlyBox = document.getElementById("detail-readonly");
+            const readonlyDl = document.getElementById("readonly-dl");
+            const editBox = document.getElementById("detail-edit");
+            const form = document.getElementById("edit-form");
+            const roomType = document.getElementById("room_type");
+            const bedGroup = document.getElementById("bed-preference-group");
+            const bedSelect = document.getElementById("bed_preference");
+
+            function showMessage(type, html) {
+                msgEl.className = "message " + type;
+                msgEl.innerHTML = html;
+                msgEl.hidden = false;
+            }
+
+            function toggleBedPreference() {
+                const isSingle = roomType.value === "single";
+                bedGroup.hidden = isSingle;
+                if (isSingle) {
+                    bedSelect.value = "";
+                }
+            }
+
+            roomType.addEventListener("change", toggleBedPreference);
+
+            function renderReadonly(r) {
+                readonlyDl.innerHTML = `
+          <dt>Stav</dt><dd><span class="status-pill">${HotelCommon.escapeHtml(r.status)}</span></dd>
+          <dt>E-mail žadatele</dt><dd>${HotelCommon.escapeHtml(r.requester_email)}</dd>
+          <dt>Jméno</dt><dd>${HotelCommon.escapeHtml(r.requester_name)}</dd>
+          <dt>Město</dt><dd>${HotelCommon.escapeHtml(r.city)}</dd>
+          <dt>Termín</dt><dd>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</dd>
+          <dt>Typ pokoje</dt><dd>${HotelCommon.escapeHtml(r.room_type)}</dd>
+          <dt>Postele</dt><dd>${r.bed_preference ? HotelCommon.escapeHtml(r.bed_preference) : "—"}</dd>
+          <dt>Poznámka</dt><dd>${r.note ? HotelCommon.escapeHtml(r.note) : "—"}</dd>
+          <dt>Hotel / číslo</dt><dd>${r.hotel_name ? HotelCommon.escapeHtml(r.hotel_name) : "—"} / ${r.reservation_number ? HotelCommon.escapeHtml(r.reservation_number) : "—"}</dd>`;
+                readonlyBox.hidden = false;
+            }
+
+            function fillForm(r) {
+                document.getElementById("requester_name").value = r.requester_name;
+                document.getElementById("city").value = r.city;
+                document.getElementById("date_from").value = r.date_from;
+                document.getElementById("date_to").value = r.date_to;
+                roomType.value = r.room_type;
+                bedSelect.value = r.bed_preference || "";
+                document.getElementById("note").value = r.note || "";
+                toggleBedPreference();
+            }
+
+            (async () => {
+                const { res: mr, data: me } = await HotelAuth.apiJson("/auth/me");
+                if (!mr.ok) {
+                    return;
+                }
+                if (me.role === "RECEPTION") {
+                    window.location.href = "/admin/requests";
+                    return;
+                }
+
+                const { res, data } = await HotelAuth.apiJson(
+                    "/reservations/" + encodeURIComponent(rid)
+                );
+                if (!res.ok) {
+                    showMessage("error", HotelCommon.parseErrorDetail(data));
+                    return;
+                }
+                const r = data;
+                const locked = r.status === "BOOKED" || r.status === "CANCELLED";
+                renderReadonly(r);
+                if (locked) {
+                    return;
+                }
+                fillForm(r);
+                editBox.hidden = false;
+
+                form.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const dateFrom = document.getElementById("date_from").value;
+                    const dateTo = document.getElementById("date_to").value;
+                    if (dateTo < dateFrom) {
+                        showMessage("error", "Datum odjezdu musí být po příjezdu.");
+                        return;
+                    }
+                    const body = {
+                        requester_name: document.getElementById("requester_name").value.trim(),
+                        city: document.getElementById("city").value,
+                        date_from: dateFrom,
+                        date_to: dateTo,
+                        room_type: roomType.value,
+                        note: document.getElementById("note").value.trim() || null,
+                    };
+                    if (roomType.value === "multi") {
+                        body.bed_preference = bedSelect.value || null;
+                    } else {
+                        body.bed_preference = null;
+                    }
+                    const { res: sr, data: sd } = await HotelAuth.apiJson(
+                        "/reservations/" + encodeURIComponent(rid),
+                        { method: "PUT", body: JSON.stringify(body) }
+                    );
+                    if (!sr.ok) {
+                        showMessage("error", HotelCommon.parseErrorDetail(sd));
+                        return;
+                    }
+                    window.location.href = "/app/my-requests";
+                });
+
+                document.getElementById("cancel-btn").addEventListener("click", async () => {
+                    if (!confirm("Opravdu zrušit tuto žádost?")) {
+                        return;
+                    }
+                    const { res: cr, data: cd } = await HotelAuth.apiJson(
+                        "/reservations/" + encodeURIComponent(rid) + "/cancel",
+                        { method: "POST" }
+                    );
+                    if (!cr.ok) {
+                        showMessage("error", HotelCommon.parseErrorDetail(cd));
+                        return;
+                    }
+                    window.location.href = "/app/my-requests";
+                });
+            })();
+        })();
+    </script>
+</body>
+</html>

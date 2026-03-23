@@ -1,0 +1,7 @@
+backend/hotel_local.db
+backend/hotel_local.db-journal
+backend/.env
+__pycache__/
+*.pyc
+.venv/
+venv/
