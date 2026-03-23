@@ -1,3 +1,24 @@
+/**
+ * Static demo on GitHub Pages: ?preview=1 or ?nahled=1 stores flag in sessionStorage.
+ * ?preview=0 clears it. Lets stakeholders click through UI without a backend.
+ */
+(function initHotelPreviewMode() {
+    try {
+        const sp = new URLSearchParams(window.location.search);
+        if (sp.get("preview") === "1" || sp.get("nahled") === "1") {
+            sessionStorage.setItem("hotel_preview", "1");
+        }
+        if (sp.get("preview") === "0" || sp.get("nahled") === "0") {
+            sessionStorage.removeItem("hotel_preview");
+        }
+    } catch {
+        /* ignore */
+    }
+    window.__HOTEL_PREVIEW__ =
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("hotel_preview") === "1";
+})();
+
 // API base: same origin when served by FastAPI static mount; override for local dev if needed
 (function () {
     const script = document.currentScript;
@@ -121,5 +142,29 @@
         document.addEventListener("DOMContentLoaded", go);
     } else {
         go();
+    }
+})();
+
+(function hotelPreviewBanner() {
+    function insert() {
+        if (!window.__HOTEL_PREVIEW__ || !document.body) {
+            return;
+        }
+        if (document.getElementById("hotel-preview-banner")) {
+            return;
+        }
+        const el = document.createElement("div");
+        el.id = "hotel-preview-banner";
+        el.className = "hotel-preview-banner";
+        el.setAttribute("role", "status");
+        el.innerHTML =
+            "<strong>Náhled rozhraní.</strong> Žádná data se neukládají; přihlášení a API vyžadují běžící server. " +
+            '<a href="https://github.com/stixj/rezervace-hotelu">Zdrojový kód</a>.';
+        document.body.insertAdjacentElement("afterbegin", el);
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", insert);
+    } else {
+        insert();
     }
 })();

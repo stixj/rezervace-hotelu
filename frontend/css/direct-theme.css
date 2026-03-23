@@ -658,6 +658,21 @@ button.linklike {
     background: rgba(0, 64, 51, 0.08);
 }
 
+/* Demo banner (GitHub Pages — ?preview=1) */
+.hotel-preview-banner {
+    background: var(--header-green, #004d33);
+    color: #fff;
+    padding: 0.65rem 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    line-height: 1.45;
+}
+
+.hotel-preview-banner a {
+    color: var(--lime-brand, #c4de00);
+    text-decoration: underline;
+}
+
 @media (max-width: 640px) {
     .main-content {
         padding: 28px 16px 40px;

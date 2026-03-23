@@ -113,20 +113,22 @@
     <script src="js/nav.js"></script>
     <script>
         (function () {
-            if (!HotelAuth.getToken()) {
+            if (!window.__HOTEL_PREVIEW__ && !HotelAuth.getToken()) {
                 window.hotelGo("/login");
                 return;
             }
 
-            (async () => {
-                const { res: mr, data: me } = await HotelAuth.apiJson("/auth/me");
-                if (!mr.ok) {
-                    return;
-                }
-                if (me.role === "RECEPTION") {
-                    window.hotelGo("/admin/requests");
-                }
-            })();
+            if (!window.__HOTEL_PREVIEW__) {
+                (async () => {
+                    const { res: mr, data: me } = await HotelAuth.apiJson("/auth/me");
+                    if (!mr.ok) {
+                        return;
+                    }
+                    if (me.role === "RECEPTION") {
+                        window.hotelGo("/admin/requests");
+                    }
+                })();
+            }
 
             const form = document.getElementById("reservation-form");
             const roomType = document.getElementById("room_type");
@@ -179,6 +181,22 @@
                     body.bed_preference = bed || null;
                 } else {
                     body.bed_preference = null;
+                }
+
+                if (window.__HOTEL_PREVIEW__) {
+                    const fakeId =
+                        typeof crypto !== "undefined" && crypto.randomUUID
+                            ? crypto.randomUUID()
+                            : "demo-" + String(Date.now());
+                    showMessage(
+                        "success",
+                        "<strong>(Náhled)</strong> Simulace odeslání — data se neukládají. " +
+                            `Ukázkové ID: <code style="word-break:break-all">${HotelCommon.escapeHtml(fakeId)}</code>`
+                    );
+                    form.reset();
+                    toggleBedPreference();
+                    submitBtn.disabled = false;
+                    return;
                 }
 
                 const { res, data } = await HotelAuth.apiJson("/reservations", {
