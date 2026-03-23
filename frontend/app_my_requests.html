@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moje žádosti – Rezervace hotelu</title>
-    <link rel="stylesheet" href="/css/direct-theme.css">
-    <script src="/js/config.js"></script>
+    <link rel="stylesheet" href="css/direct-theme.css">
+    <script src="js/config.js"></script>
 </head>
 <body>
     <header class="header">
@@ -63,13 +63,13 @@
         </div>
     </footer>
 
-    <script src="/js/common.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/nav.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/nav.js"></script>
     <script>
         (function () {
             if (!HotelAuth.getToken()) {
-                window.location.href = "/login";
+                window.hotelGo("/login");
                 return;
             }
 
@@ -79,7 +79,7 @@
                     return;
                 }
                 if (me.role === "RECEPTION") {
-                    window.location.href = "/admin/requests";
+                    window.hotelGo("/admin/requests");
                 }
             })();
 
@@ -106,11 +106,13 @@
                 }
                 tbody.innerHTML = data
                     .map((r) => {
-                        const idEnc = encodeURIComponent(r.id);
+                        const detailHref = window.hotelUiHref(
+                            "/app/requests/" + encodeURIComponent(r.id)
+                        );
                         const canEdit =
                             r.status !== "BOOKED" && r.status !== "CANCELLED";
                         const edit = canEdit
-                            ? `<a href="/app/requests/${idEnc}">Upravit</a>`
+                            ? `<a href="${detailHref}">Upravit</a>`
                             : "—";
                         const cancel = canEdit
                             ? ` <button type="button" class="linklike" data-cancel="${String(r.id)}">Zrušit</button>`
@@ -120,7 +122,7 @@
               <td>${HotelCommon.escapeHtml(r.city)}</td>
               <td>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</td>
               <td>${HotelCommon.escapeHtml(String(r.created_at || "").slice(0, 19))}</td>
-              <td class="actions-cell"><a href="/app/requests/${idEnc}">Detail</a> · ${edit}${cancel}</td>
+              <td class="actions-cell"><a href="${detailHref}">Detail</a> · ${edit}${cancel}</td>
             </tr>`;
                     })
                     .join("");

@@ -36,7 +36,7 @@
         const data = await res.json().catch(() => ({}));
         if (res.status === 401 && !skipAuthRedirect) {
             clearToken();
-            window.location.href = "/login";
+            window.hotelGo("/login");
         }
         return { res, data };
     }
