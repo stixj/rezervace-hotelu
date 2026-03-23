@@ -9,6 +9,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 
+from schemas.reservation import RESERVATION_CITY_BODY_SCHEMA
+
 from api.admin_reservations import router as admin_reservations_router
 from api.auth import router as auth_router
 from api.my_reservations import router as my_reservations_router
@@ -86,7 +88,11 @@ async def add_hotel_identity_header(request: Request, call_next):
 @app.get("/_hotel_ready", include_in_schema=False)
 def hotel_ready():
     """Sanity check that this codebase is the one bound to the port (open in browser)."""
-    return {"app": "hotel-reservations", "login_path": "/login"}
+    return {
+        "app": "hotel-reservations",
+        "login_path": "/login",
+        "reservation_city_body": RESERVATION_CITY_BODY_SCHEMA,
+    }
 
 
 @app.get("/login", include_in_schema=False)

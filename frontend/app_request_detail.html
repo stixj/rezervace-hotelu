@@ -36,6 +36,13 @@
             <dl class="status-detail" id="readonly-dl"></dl>
         </div>
 
+        <div class="form-container loaded" id="booked-cancel-block" hidden>
+            <div class="form-actions">
+                <button type="button" class="ghost" id="cancel-booked-btn">Zrušit žádost</button>
+            </div>
+            <p class="form-hint">U již potvrzené rezervace zrušení žádosti informuje recepci; storno u hotelu vyřídí recepce.</p>
+        </div>
+
         <div class="form-container" id="detail-edit" hidden>
             <form id="edit-form" novalidate>
                 <section class="form-section">
@@ -47,12 +54,17 @@
                         </div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label for="city">Město <span class="required">*</span></label>
-                            <select id="city" name="city" required>
+                        <div class="form-group" id="city-preset-group">
+                            <label for="city_preset">Město <span class="required">*</span></label>
+                            <select id="city_preset" name="city_preset" required aria-describedby="city-edit-hint">
+                                <option value="" disabled>Vyberte město</option>
                                 <option value="Praha">Praha</option>
                                 <option value="Brno">Brno</option>
+                                <option value="__other__">Jiné město</option>
                             </select>
+                            <span id="city-edit-hint" class="form-hint">
+                                Prahu a Brno vyberete jedním klikem; jinou lokalitu zadejte přes „Jiné město“.
+                            </span>
                         </div>
                         <div class="form-group">
                             <label for="date_from">Datum příjezdu <span class="required">*</span></label>
@@ -61,6 +73,19 @@
                         <div class="form-group">
                             <label for="date_to">Datum odjezdu <span class="required">*</span></label>
                             <input id="date_to" name="date_to" type="date" required>
+                        </div>
+                    </div>
+                    <div class="form-row" id="city-other-row" hidden>
+                        <div class="form-group" id="city-other-group">
+                            <label for="city_other">Upřesněte město <span class="required">*</span></label>
+                            <input
+                                id="city_other"
+                                name="city_other"
+                                type="text"
+                                autocomplete="address-level2"
+                                placeholder="Např. Olomouc"
+                                aria-describedby="city-edit-hint"
+                            />
                         </div>
                     </div>
                     <div class="form-row">
@@ -107,8 +132,8 @@
         </div>
     </footer>
 
-    <script src="/js/common.js"></script>
-    <script src="/js/auth.js"></script>
+    <script src="/js/common.js?v=3"></script>
+    <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
         (function () {
@@ -127,11 +152,73 @@
             const msgEl = document.getElementById("page-message");
             const readonlyBox = document.getElementById("detail-readonly");
             const readonlyDl = document.getElementById("readonly-dl");
+            const bookedCancelBlock = document.getElementById("booked-cancel-block");
             const editBox = document.getElementById("detail-edit");
             const form = document.getElementById("edit-form");
             const roomType = document.getElementById("room_type");
             const bedGroup = document.getElementById("bed-preference-group");
             const bedSelect = document.getElementById("bed_preference");
+            const cityPreset = document.getElementById("city_preset");
+            const cityOtherRow = document.getElementById("city-other-row");
+            const cityOther = document.getElementById("city_other");
+            const cityPresetGroup = document.getElementById("city-preset-group");
+            const cityOtherGroup = document.getElementById("city-other-group");
+
+            function syncCityOtherField() {
+                const isOther = cityPreset.value === "__other__";
+                if (isOther) {
+                    cityOtherRow.removeAttribute("hidden");
+                } else {
+                    cityOtherRow.setAttribute("hidden", "");
+                }
+                cityOther.required = isOther;
+                cityOther.setAttribute("aria-hidden", isOther ? "false" : "true");
+                if (!isOther) {
+                    cityOther.value = "";
+                    cityOtherGroup.classList.remove("form-group--city-error");
+                }
+            }
+
+            function clearCityFieldErrors() {
+                cityPresetGroup.classList.remove("form-group--city-error");
+                cityOtherGroup.classList.remove("form-group--city-error");
+            }
+
+            function resolveCityForSubmit() {
+                const preset = cityPreset.value;
+                if (!preset) {
+                    return { ok: false, message: "Vyberte město pobytu." };
+                }
+                if (preset === "__other__") {
+                    const custom = cityOther.value.trim();
+                    if (!custom) {
+                        return {
+                            ok: false,
+                            message: "Vyplňte pole Upřesněte město.",
+                            highlightOther: true,
+                        };
+                    }
+                    return { ok: true, city: custom };
+                }
+                return { ok: true, city: preset };
+            }
+
+            function applyCityFromSaved(cityStr) {
+                const c = String(cityStr || "");
+                if (c === "Praha" || c === "Brno") {
+                    cityPreset.value = c;
+                    cityOther.value = "";
+                } else {
+                    cityPreset.value = "__other__";
+                    cityOther.value = c;
+                }
+                syncCityOtherField();
+            }
+
+            cityPreset.addEventListener("change", () => {
+                clearCityFieldErrors();
+                syncCityOtherField();
+            });
 
             function showMessage(type, html) {
                 msgEl.className = "message " + type;
@@ -150,8 +237,13 @@
             roomType.addEventListener("change", toggleBedPreference);
 
             function renderReadonly(r) {
+                const urgencyBlock =
+                    r.urgency === "URGENT"
+                        ? `<dt>Urgence</dt><dd><span class="urgency-chip">Urgentní</span> — ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</dd>`
+                        : "";
                 readonlyDl.innerHTML = `
-          <dt>Stav</dt><dd><span class="status-pill">${HotelCommon.escapeHtml(r.status)}</span></dd>
+          <dt>Stav</dt><dd><span class="status-pill" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span></dd>
+          ${urgencyBlock}
           <dt>E-mail žadatele</dt><dd>${HotelCommon.escapeHtml(r.requester_email)}</dd>
           <dt>Jméno</dt><dd>${HotelCommon.escapeHtml(r.requester_name)}</dd>
           <dt>Město</dt><dd>${HotelCommon.escapeHtml(r.city)}</dd>
@@ -165,7 +257,7 @@
 
             function fillForm(r) {
                 document.getElementById("requester_name").value = r.requester_name;
-                document.getElementById("city").value = r.city;
+                applyCityFromSaved(r.city);
                 document.getElementById("date_from").value = r.date_from;
                 document.getElementById("date_to").value = r.date_to;
                 roomType.value = r.room_type;
@@ -192,9 +284,36 @@
                     return;
                 }
                 const r = data;
-                const locked = r.status === "BOOKED" || r.status === "CANCELLED";
+                const isCancelled = r.status === "CANCELLED";
+                const isBooked = r.status === "BOOKED";
                 renderReadonly(r);
-                if (locked) {
+                bookedCancelBlock.hidden = !isBooked;
+
+                function wireCancelButton(btn) {
+                    btn.addEventListener("click", async () => {
+                        const msg = isBooked
+                            ? "Opravdu zrušit tuto již potvrzenou rezervaci? Recepce bude informována."
+                            : "Opravdu zrušit tuto žádost?";
+                        if (!confirm(msg)) {
+                            return;
+                        }
+                        const { res: cr, data: cd } = await HotelAuth.apiJson(
+                            "/reservations/" + encodeURIComponent(rid) + "/cancel",
+                            { method: "POST" }
+                        );
+                        if (!cr.ok) {
+                            showMessage("error", HotelCommon.parseErrorDetail(cd));
+                            return;
+                        }
+                        window.location.href = "/app/my-requests";
+                    });
+                }
+
+                if (isCancelled) {
+                    return;
+                }
+                if (isBooked) {
+                    wireCancelButton(document.getElementById("cancel-booked-btn"));
                     return;
                 }
                 fillForm(r);
@@ -208,9 +327,22 @@
                         showMessage("error", "Datum odjezdu musí být po příjezdu.");
                         return;
                     }
+                    const cityRes = resolveCityForSubmit();
+                    if (!cityRes.ok) {
+                        clearCityFieldErrors();
+                        if (cityRes.highlightOther) {
+                            cityOtherGroup.classList.add("form-group--city-error");
+                            cityOther.focus();
+                        } else {
+                            cityPresetGroup.classList.add("form-group--city-error");
+                            cityPreset.focus();
+                        }
+                        showMessage("error", cityRes.message);
+                        return;
+                    }
                     const body = {
                         requester_name: document.getElementById("requester_name").value.trim(),
-                        city: document.getElementById("city").value,
+                        city: cityRes.city,
                         date_from: dateFrom,
                         date_to: dateTo,
                         room_type: roomType.value,
@@ -232,20 +364,7 @@
                     window.location.href = "/app/my-requests";
                 });
 
-                document.getElementById("cancel-btn").addEventListener("click", async () => {
-                    if (!confirm("Opravdu zrušit tuto žádost?")) {
-                        return;
-                    }
-                    const { res: cr, data: cd } = await HotelAuth.apiJson(
-                        "/reservations/" + encodeURIComponent(rid) + "/cancel",
-                        { method: "POST" }
-                    );
-                    if (!cr.ok) {
-                        showMessage("error", HotelCommon.parseErrorDetail(cd));
-                        return;
-                    }
-                    window.location.href = "/app/my-requests";
-                });
+                wireCancelButton(document.getElementById("cancel-btn"));
             })();
         })();
     </script>

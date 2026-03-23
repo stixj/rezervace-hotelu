@@ -20,9 +20,9 @@ class RequestStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
-class City(str, enum.Enum):
-    PRAHA = "Praha"
-    BRNO = "Brno"
+class RequestUrgency(str, enum.Enum):
+    STANDARD = "STANDARD"
+    URGENT = "URGENT"
 
 
 class RoomType(str, enum.Enum):
@@ -52,7 +52,7 @@ class ReservationRequest(SQLModel, table=True):
     user_id: Optional[UUID] = Field(default=None, foreign_key="users.id", index=True)
     requester_name: str
     requester_email: str
-    city: City = Field(sa_column=Column(String))
+    city: str = Field(sa_column=Column(String))
     date_from: date
     date_to: date
     room_type: RoomType = Field(sa_column=Column(String))
@@ -60,6 +60,13 @@ class ReservationRequest(SQLModel, table=True):
         default=None, sa_column=Column(String, nullable=True)
     )
     note: Optional[str] = None
+    urgency: RequestUrgency = Field(
+        default=RequestUrgency.STANDARD, sa_column=Column(String)
+    )
+    urgency_reason: Optional[str] = Field(
+        default=None, sa_column=Column(String(500), nullable=True)
+    )
+    was_ever_booked: bool = Field(default=False)
     status: RequestStatus = Field(
         default=RequestStatus.NEW, sa_column=Column(String)
     )

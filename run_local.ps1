@@ -1,6 +1,22 @@
 # Run hotel reservation app on localhost (SQLite if DATABASE_URL unset)
+param(
+    [string] $ProjectRoot = ""
+)
+
 $ErrorActionPreference = "Stop"
-$ScriptRoot = $PSScriptRoot
+
+# When launched via run_local.bat, ProjectRoot is always set (avoids empty PSScriptRoot edge cases).
+if (-not [string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $ScriptRoot = $ProjectRoot.TrimEnd('\', '/')
+}
+elseif (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    $ScriptRoot = $PSScriptRoot
+}
+else {
+    Write-Host "[ERROR] Nelze urcit slozku projektu. Spoustej pres run_local.bat nebo: powershell -File run_local.ps1 -ProjectRoot `"C:\cesta\k\projektu`"" -ForegroundColor Red
+    Read-Host "Stisknete Enter pro ukonceni"
+    exit 1
+}
 
 function Read-DotEnvValue {
     param(
@@ -82,7 +98,7 @@ $baseUrl = "http://127.0.0.1:$HotelPort"
 Write-Host ""
 Write-Host "=== Jak otevrit aplikaci ===" -ForegroundColor Cyan
 Write-Host "1) Nech tento skript bezet (server bezi, dokud ho nezastavis Ctrl+C)."
-Write-Host "2) Test: $baseUrl/__hotel_ready  (JSON s app=hotel-reservations)"
+Write-Host "2) Test: $baseUrl/__hotel_ready  (ocekavej reservation_city_body=free_text_string; chybi-li, bezi stary backend - restartuj)"
 Write-Host "3) Login: $baseUrl/login"
 Write-Host "4) Ucty z backend\.env (BOOTSTRAP_*):"
 Write-Host "   Zamestnanec:  zamestnanec@local.test / DevZamestnanec123"

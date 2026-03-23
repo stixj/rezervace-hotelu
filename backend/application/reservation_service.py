@@ -8,7 +8,14 @@ from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from infrastructure.email import send_email
-from infrastructure.models import BedPreference, RequestStatus, ReservationRequest, RoomType, User
+from infrastructure.models import (
+    BedPreference,
+    RequestStatus,
+    RequestUrgency,
+    ReservationRequest,
+    RoomType,
+    User,
+)
 from schemas.reservation import ReservationCreate, ReservationRead, ReservationUpdate, StatusUpdateBody
 
 logger = logging.getLogger(__name__)
@@ -69,6 +76,8 @@ def create_reservation(session: Session, data: ReservationCreate, user: User) ->
         room_type=data.room_type,
         bed_preference=data.bed_preference,
         note=data.note,
+        urgency=data.urgency,
+        urgency_reason=data.urgency_reason,
         status=RequestStatus.NEW,
     )
     session.add(row)
@@ -84,6 +93,8 @@ def create_reservation(session: Session, data: ReservationCreate, user: User) ->
         f"Termín: {row.date_from} – {row.date_to}\n"
         f"Typ pokoje: {_enum_str(row.room_type)}\n"
     )
+    if row.urgency == RequestUrgency.URGENT:
+        body += f"Urgence: urgentní\nDůvod: {row.urgency_reason}\n"
     _notify_reception_safe(f"[Hotel] Nový požadavek {row.id}", body)
     return ReservationRead.model_validate(row)
 
@@ -166,9 +177,8 @@ def cancel_reservation(session: Session, reservation_id: UUID, user: User) -> Re
     _ensure_employee_owns(row, user)
     if row.status == RequestStatus.CANCELLED:
         return ReservationRead.model_validate(row)
-    if row.status == RequestStatus.BOOKED:
-        raise HTTPException(status_code=400, detail="Cannot cancel a booked reservation")
 
+    was_booked = row.status == RequestStatus.BOOKED
     row.status = RequestStatus.CANCELLED
     now = datetime.utcnow()
     row.cancelled_at = now
@@ -183,6 +193,11 @@ def cancel_reservation(session: Session, reservation_id: UUID, user: User) -> Re
         f"ID: {row.id}\n"
         f"Žadatel: {row.requester_name} <{row.requester_email}>\n"
     )
+    if was_booked:
+        text += (
+            f"(Dříve potvrzená rezervace — hotel: {row.hotel_name or '—'}, "
+            f"č. {row.reservation_number or '—'})\n"
+        )
     _notify_reception_safe(f"[Hotel] Zrušení požadavku {row.id}", text)
     return ReservationRead.model_validate(row)
 
@@ -221,6 +236,8 @@ def update_status(
             )
 
     row.status = data.status
+    if data.status == RequestStatus.BOOKED:
+        row.was_ever_booked = True
     if data.hotel_name is not None:
         row.hotel_name = data.hotel_name
     if data.reservation_number is not None:

@@ -1,4 +1,25 @@
 (function () {
+    // index.html has no auth.js; patch stale cached common.js missing statusLabel (same mapping as common.js).
+    (function patchStatusLabel() {
+        const hc = window.HotelCommon;
+        if (!hc || typeof hc.statusLabel === "function") {
+            return;
+        }
+        const L = {
+            NEW: "Nová",
+            IN_PROGRESS: "V řešení",
+            BOOKED: "Rezervováno",
+            CANCELLED: "Zrušeno",
+        };
+        hc.statusLabel = function (status) {
+            if (status == null || status === "") {
+                return "";
+            }
+            const key = String(status);
+            return L[key] ?? key;
+        };
+    })();
+
     const API_BASE = window.__API_BASE__ ?? "";
 
     const form = document.getElementById("reservation-form");
@@ -51,6 +72,12 @@
         return JSON.stringify(d);
     }
 
+    function escapeHtml(s) {
+        const div = document.createElement("div");
+        div.textContent = s;
+        return div.innerHTML;
+    }
+
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         hideMessage(msgEl);
@@ -95,7 +122,7 @@
             showMessage(
                 msgEl,
                 "success",
-                `<strong>Žádost byla odeslána.</strong><br>Číslo žádosti (UUID): <code style="word-break:break-all">${data.id}</code><br>Stav: ${data.status}. Uložte si prosím identifikátor pro případné dotazy.`
+                `<strong>Žádost byla odeslána.</strong><br>Číslo žádosti (UUID): <code style="word-break:break-all">${escapeHtml(String(data.id))}</code><br>Stav: <span class="status-pill" data-status="${escapeHtml(String(data.status))}">${escapeHtml(HotelCommon.statusLabel(data.status))}</span>. Uložte si prosím identifikátor pro případné dotazy.`
             );
             form.reset();
             toggleBedPreference();
@@ -127,7 +154,7 @@
                 return;
             }
             lookupResult.innerHTML = `
-        <div class="status-badge">${escapeHtml(data.status)}</div>
+        <div class="status-badge" data-status="${escapeHtml(data.status)}">${escapeHtml(HotelCommon.statusLabel(data.status))}</div>
         <dl class="status-detail">
           <dt>Město</dt><dd>${escapeHtml(data.city)}</dd>
           <dt>Od – do</dt><dd>${escapeHtml(data.date_from)} – ${escapeHtml(data.date_to)}</dd>
@@ -139,12 +166,6 @@
             showMessage(lookupMsg, "error", "Spojení s API selhalo.");
         }
     });
-
-    function escapeHtml(s) {
-        const div = document.createElement("div");
-        div.textContent = s;
-        return div.innerHTML;
-    }
 
     document.querySelector(".form-container")?.classList.add("loaded");
 })();

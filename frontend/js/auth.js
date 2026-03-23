@@ -48,4 +48,25 @@
         authHeaders,
         apiJson,
     };
+
+    // If browser cached an older common.js without statusLabel, avoid runtime errors on list/detail pages.
+    (function patchStatusLabel() {
+        const hc = global.HotelCommon;
+        if (!hc || typeof hc.statusLabel === "function") {
+            return;
+        }
+        const L = {
+            NEW: "Nová",
+            IN_PROGRESS: "V řešení",
+            BOOKED: "Rezervováno",
+            CANCELLED: "Zrušeno",
+        };
+        hc.statusLabel = function (status) {
+            if (status == null || status === "") {
+                return "";
+            }
+            const key = String(status);
+            return L[key] ?? key;
+        };
+    })();
 })(window);

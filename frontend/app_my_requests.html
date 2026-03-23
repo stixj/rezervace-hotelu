@@ -63,8 +63,8 @@
         </div>
     </footer>
 
-    <script src="/js/common.js"></script>
-    <script src="/js/auth.js"></script>
+    <script src="/js/common.js?v=3"></script>
+    <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
         (function () {
@@ -109,14 +109,19 @@
                         const idEnc = encodeURIComponent(r.id);
                         const canEdit =
                             r.status !== "BOOKED" && r.status !== "CANCELLED";
+                        const canCancel = r.status !== "CANCELLED";
                         const edit = canEdit
                             ? `<a href="/app/requests/${idEnc}">Upravit</a>`
                             : "—";
-                        const cancel = canEdit
-                            ? ` <button type="button" class="linklike" data-cancel="${String(r.id)}">Zrušit</button>`
+                        const cancel = canCancel
+                            ? ` <button type="button" class="linklike" data-cancel="${String(r.id)}" data-booked="${r.status === "BOOKED" ? "1" : ""}">Zrušit</button>`
                             : "";
+                        const uChip = HotelCommon.urgencyChipHtml(
+                            r.urgency,
+                            r.urgency_reason
+                        );
                         return `<tr>
-              <td><span class="status-pill">${HotelCommon.escapeHtml(r.status)}</span></td>
+              <td class="status-and-urgency-cell"><span class="status-pill" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span>${uChip}</td>
               <td>${HotelCommon.escapeHtml(r.city)}</td>
               <td>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</td>
               <td>${HotelCommon.escapeHtml(String(r.created_at || "").slice(0, 19))}</td>
@@ -128,7 +133,11 @@
                 tbody.querySelectorAll("[data-cancel]").forEach((btn) => {
                     btn.addEventListener("click", async () => {
                         const id = btn.getAttribute("data-cancel");
-                        if (!confirm("Opravdu zrušit tuto žádost?")) {
+                        const booked = btn.getAttribute("data-booked") === "1";
+                        const msg = booked
+                            ? "Opravdu zrušit tuto již potvrzenou rezervaci? Recepce bude informována."
+                            : "Opravdu zrušit tuto žádost?";
+                        if (!confirm(msg)) {
                             return;
                         }
                         const { res: cr, data: cd } = await HotelAuth.apiJson(

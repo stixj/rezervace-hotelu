@@ -32,34 +32,48 @@
 
         <div id="page-message" class="message" hidden role="status"></div>
 
-        <div class="form-container loaded" id="detail-block" hidden>
-            <dl class="status-detail" id="readonly-dl"></dl>
+        <div id="request-priority-strip" class="request-priority-strip" hidden></div>
 
-            <form id="status-form" class="form-section" style="margin-top: 24px;">
-                <h2 class="section-title">Změna stavu a rezervace</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="status">Stav <span class="required">*</span></label>
-                        <select id="status" required>
-                            <option value="NEW">NEW</option>
-                            <option value="IN_PROGRESS">IN_PROGRESS</option>
-                            <option value="BOOKED">BOOKED</option>
-                            <option value="CANCELLED">CANCELLED</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="hotel_name">Název hotelu</label>
-                        <input id="hotel_name" type="text" placeholder="Vyplňte při BOOKED">
-                    </div>
-                    <div class="form-group">
-                        <label for="reservation_number">Číslo rezervace</label>
-                        <input id="reservation_number" type="text" placeholder="Vyplňte při BOOKED">
-                    </div>
+        <div class="form-container loaded request-detail-page" id="detail-block" hidden>
+            <div class="request-detail-columns">
+                <div class="request-detail-readonly">
+                    <section class="request-summary-block" aria-labelledby="request-summary-heading">
+                        <h2 id="request-summary-heading" class="request-panel-heading">Shrnutí žádosti</h2>
+                        <dl class="status-detail status-detail--summary" id="readonly-summary"></dl>
+                    </section>
+                    <section class="request-meta-block" aria-labelledby="request-meta-heading">
+                        <h2 id="request-meta-heading" class="request-panel-heading">Další údaje</h2>
+                        <dl class="status-detail status-detail--meta" id="readonly-meta"></dl>
+                    </section>
                 </div>
-                <div class="form-actions">
-                    <button type="submit" class="cta" id="save-btn">Uložit</button>
+                <div class="request-action-column">
+                    <form id="status-form" class="form-section request-action-panel">
+                        <h2 class="section-title request-action-panel__title">Změna stavu a rezervace</h2>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="status">Stav <span class="required">*</span></label>
+                                <select id="status" required>
+                                    <option value="NEW">Nová</option>
+                                    <option value="IN_PROGRESS">V řešení</option>
+                                    <option value="BOOKED">Rezervováno</option>
+                                    <option value="CANCELLED">Zrušeno</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="hotel_name">Název hotelu</label>
+                                <input id="hotel_name" type="text" placeholder="Vyplňte při stavu Rezervováno">
+                            </div>
+                            <div class="form-group">
+                                <label for="reservation_number">Číslo rezervace</label>
+                                <input id="reservation_number" type="text" placeholder="Vyplňte při stavu Rezervováno">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="cta" id="save-btn">Uložit</button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </main>
 
@@ -75,8 +89,8 @@
         </div>
     </footer>
 
-    <script src="/js/common.js"></script>
-    <script src="/js/auth.js"></script>
+    <script src="/js/common.js?v=3"></script>
+    <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
         (function () {
@@ -93,8 +107,10 @@
             }
 
             const msgEl = document.getElementById("page-message");
+            const priorityStrip = document.getElementById("request-priority-strip");
             const block = document.getElementById("detail-block");
-            const readonlyDl = document.getElementById("readonly-dl");
+            const readonlySummary = document.getElementById("readonly-summary");
+            const readonlyMeta = document.getElementById("readonly-meta");
             const form = document.getElementById("status-form");
             const statusEl = document.getElementById("status");
             const hotelEl = document.getElementById("hotel_name");
@@ -129,20 +145,44 @@
                     return;
                 }
                 const r = data;
-                readonlyDl.innerHTML = `
+                const urgencySummary =
+                    r.urgency === "URGENT"
+                        ? `<dt>Urgence</dt><dd><span class="urgency-chip">Urgentní</span> — ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</dd>`
+                        : "";
+                readonlySummary.innerHTML = `
           <dt>ID</dt><dd><code>${HotelCommon.escapeHtml(String(r.id))}</code></dd>
-          <dt>Stav</dt><dd><span class="status-pill">${HotelCommon.escapeHtml(r.status)}</span></dd>
+          <dt>Stav</dt><dd><span class="status-pill status-pill--large" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span></dd>
+          ${urgencySummary}
           <dt>Žadatel</dt><dd>${HotelCommon.escapeHtml(r.requester_name)} &lt;${HotelCommon.escapeHtml(r.requester_email)}&gt;</dd>
           <dt>Město</dt><dd>${HotelCommon.escapeHtml(r.city)}</dd>
           <dt>Termín</dt><dd>${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}</dd>
-          <dt>Typ pokoje</dt><dd>${HotelCommon.escapeHtml(r.room_type)}</dd>
-          <dt>Postele</dt><dd>${r.bed_preference ? HotelCommon.escapeHtml(r.bed_preference) : "—"}</dd>
+          <dt>Typ pokoje</dt><dd>${HotelCommon.escapeHtml(r.room_type)}</dd>`;
+                readonlyMeta.innerHTML = `
           <dt>Poznámka</dt><dd>${r.note ? HotelCommon.escapeHtml(r.note) : "—"}</dd>
+          <dt>Postele</dt><dd>${r.bed_preference ? HotelCommon.escapeHtml(r.bed_preference) : "—"}</dd>
           <dt>Hotel / číslo (uloženo)</dt><dd>${r.hotel_name ? HotelCommon.escapeHtml(r.hotel_name) : "—"} / ${r.reservation_number ? HotelCommon.escapeHtml(r.reservation_number) : "—"}</dd>`;
 
                 statusEl.value = r.status;
                 hotelEl.value = r.hotel_name || "";
                 resNoEl.value = r.reservation_number || "";
+                const stripParts = [];
+                if (r.urgency === "URGENT") {
+                    stripParts.push(
+                        `<div class="priority-strip-row priority-strip-row--urgent"><strong>Urgentní.</strong> ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</div>`
+                    );
+                }
+                if (r.status === "CANCELLED" && r.was_ever_booked === true) {
+                    stripParts.push(
+                        `<div class="priority-strip-row priority-strip-row--storno">Zrušeno po rezervaci — ke kontrole (operativa / hotel).</div>`
+                    );
+                }
+                if (stripParts.length) {
+                    priorityStrip.innerHTML = stripParts.join("");
+                    priorityStrip.hidden = false;
+                } else {
+                    priorityStrip.innerHTML = "";
+                    priorityStrip.hidden = true;
+                }
                 block.hidden = false;
 
                 form.addEventListener("submit", async (e) => {
@@ -153,7 +193,7 @@
                     if (st === "BOOKED" && (!hotel_name || !reservation_number)) {
                         showMessage(
                             "error",
-                            "Pro stav BOOKED vyplňte název hotelu i číslo rezervace."
+                            `Pro stav ${HotelCommon.statusLabel("BOOKED")} vyplňte název hotelu i číslo rezervace.`
                         );
                         return;
                     }

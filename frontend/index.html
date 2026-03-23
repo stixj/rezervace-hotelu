@@ -54,12 +54,13 @@
                     <h2 id="sec-stay" class="section-title">Pobyt</h2>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="city">Město <span class="required">*</span></label>
-                            <select id="city" name="city" required>
+                            <label for="city">Město pobytu <span class="required">*</span></label>
+                            <select id="city" name="city" required aria-describedby="city-hint">
                                 <option value="" disabled selected>Vyberte město</option>
                                 <option value="Praha">Praha</option>
                                 <option value="Brno">Brno</option>
                             </select>
+                            <span id="city-hint" class="form-hint">Firemní ubytování je v aplikaci vedené jen pro Prahu a Brno.</span>
                         </div>
                         <div class="form-group">
                             <label for="date_from">Datum příjezdu <span class="required">*</span></label>
@@ -73,18 +74,20 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="room_type">Typ pokoje <span class="required">*</span></label>
-                            <select id="room_type" name="room_type" required>
-                                <option value="single">Jednolůžkový</option>
-                                <option value="multi">Vícelůžkový</option>
+                            <select id="room_type" name="room_type" required aria-describedby="room-type-hint">
+                                <option value="single">Jednolůžkový pokoj</option>
+                                <option value="multi">Vícelůžkový pokoj</option>
                             </select>
+                            <span id="room-type-hint" class="form-hint">Jednolůžkový = jedna osoba. U vícelůžkového můžete níže upřesnit rozložení lůžek.</span>
                         </div>
                         <div class="form-group" id="bed-preference-group">
-                            <label for="bed_preference">Postele (vícelůžkový)</label>
-                            <select id="bed_preference" name="bed_preference">
+                            <label for="bed_preference">Rozložení lůžek</label>
+                            <select id="bed_preference" name="bed_preference" aria-describedby="bed-preference-hint">
                                 <option value="">Bez preference</option>
-                                <option value="double">Manželská postel</option>
-                                <option value="twin">Oddělená lůžka</option>
+                                <option value="double">Manželská postel (jedno dvojlůžko)</option>
+                                <option value="twin">Oddělená lůžka (dvě jednolůžka)</option>
                             </select>
+                            <span id="bed-preference-hint" class="form-hint">Volitelné — upřesnění pro recepci (manželská postel vs. dvě jednolůžka).</span>
                         </div>
                     </div>
                     <div class="form-row">
@@ -127,11 +130,12 @@
                 <span class="site-footer-phone">221 221 221</span>
             </div>
             <p class="site-footer-legal">
-                Direct pojišťovna, a.s. · Interní aplikace — žádosti o firemní ubytování.
+                Direct pojišťovna, a.s. · Interní aplikace — žádost o rezervaci hotelu.
             </p>
         </div>
     </footer>
 
-    <script src="js/app.js"></script>
+    <script src="js/common.js?v=2"></script>
+    <script src="js/app.js?v=2"></script>
 </body>
 </html>

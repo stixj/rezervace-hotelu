@@ -53,12 +53,49 @@ def _migrate_add_reservation_user_id() -> None:
     logger.info("Migration: added reservation_request.user_id")
 
 
+def _migrate_reservation_urgency_and_booking_flag() -> None:
+    """Add urgency, urgency_reason, was_ever_booked; backfill legacy rows."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if not insp.has_table("reservation_request"):
+        return
+    cols = {c["name"] for c in insp.get_columns("reservation_request")}
+    with engine.connect() as conn:
+        if "urgency" not in cols:
+            conn.execute(text("ALTER TABLE reservation_request ADD COLUMN urgency VARCHAR(20)"))
+            conn.commit()
+        if "urgency_reason" not in cols:
+            conn.execute(text("ALTER TABLE reservation_request ADD COLUMN urgency_reason VARCHAR(500)"))
+            conn.commit()
+        if "was_ever_booked" not in cols:
+            conn.execute(
+                text("ALTER TABLE reservation_request ADD COLUMN was_ever_booked BOOLEAN DEFAULT 0")
+            )
+            conn.commit()
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET urgency = 'STANDARD' "
+                "WHERE urgency IS NULL OR TRIM(COALESCE(urgency, '')) = ''"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE reservation_request SET was_ever_booked = 1 "
+                "WHERE status = 'BOOKED' OR (COALESCE(TRIM(reservation_number), '') != '')"
+            )
+        )
+        conn.commit()
+    logger.info("Migration: reservation_request urgency / was_ever_booked ensured")
+
+
 def init_db() -> None:
     # Import models so SQLModel registers metadata
     from infrastructure import models  # noqa: F401
 
     SQLModel.metadata.create_all(get_engine())
     _migrate_add_reservation_user_id()
+    _migrate_reservation_urgency_and_booking_flag()
     from application.auth_service import seed_bootstrap_users
 
     with Session(get_engine()) as session:

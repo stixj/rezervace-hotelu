@@ -28,18 +28,44 @@
 
     <main class="main-content">
         <h1 class="page-title">Všechny žádosti</h1>
-        <p class="page-lead">Filtrování podle stavu.</p>
+        <p class="page-lead">Pracovní přehled a filtrování podle stavu.</p>
 
-        <div class="form-container loaded" style="margin-bottom: 1rem;">
+        <div id="inbox-priority-wrap" class="inbox-priority-wrap" hidden>
+            <div id="inbox-priority-grid" class="inbox-priority-grid" data-inbox-layout="0">
+                <section class="inbox-bento-card inbox-bento-card--urgent" id="inbox-block-urgent" hidden>
+                    <header class="inbox-bento-card__header">
+                        <h2 class="inbox-bento-card__title">Urgentní k řešení</h2>
+                        <span class="inbox-bento-count" id="inbox-count-urgent" aria-hidden="true">0</span>
+                    </header>
+                    <ul class="inbox-bento-list" id="inbox-list-urgent"></ul>
+                </section>
+                <section class="inbox-bento-card inbox-bento-card--new" id="inbox-block-new" hidden>
+                    <header class="inbox-bento-card__header">
+                        <h2 class="inbox-bento-card__title">Nové žádosti</h2>
+                        <span class="inbox-bento-count" id="inbox-count-new" aria-hidden="true">0</span>
+                    </header>
+                    <ul class="inbox-bento-list" id="inbox-list-new"></ul>
+                </section>
+                <section class="inbox-bento-card inbox-bento-card--storno" id="inbox-block-storno" hidden>
+                    <header class="inbox-bento-card__header">
+                        <h2 class="inbox-bento-card__title">Storna ke kontrole</h2>
+                        <span class="inbox-bento-count" id="inbox-count-storno" aria-hidden="true">0</span>
+                    </header>
+                    <ul class="inbox-bento-list" id="inbox-list-storno"></ul>
+                </section>
+            </div>
+        </div>
+
+        <div class="form-container loaded">
             <form id="filter-form" class="form-row" style="align-items: flex-end;">
                 <div class="form-group">
                     <label for="status-filter">Stav</label>
                     <select id="status-filter" name="status">
                         <option value="">Všechny</option>
-                        <option value="NEW">NEW</option>
-                        <option value="IN_PROGRESS">IN_PROGRESS</option>
-                        <option value="BOOKED">BOOKED</option>
-                        <option value="CANCELLED">CANCELLED</option>
+                        <option value="NEW">Nová</option>
+                        <option value="IN_PROGRESS">V řešení</option>
+                        <option value="BOOKED">Rezervováno</option>
+                        <option value="CANCELLED">Zrušeno</option>
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
@@ -57,27 +83,27 @@
                         <tr>
                             <th scope="col" class="sort-cell">
                                 <button type="button" class="th-sort" data-sort="status" aria-label="Řadit podle stavu">
-                                    Stav<span class="sort-ind" aria-hidden="true"></span>
+                                    Stav<span class="sort-ind" aria-hidden="true">▲▼</span>
                                 </button>
                             </th>
                             <th scope="col" class="sort-cell">
                                 <button type="button" class="th-sort" data-sort="requester_name" aria-label="Řadit podle žadatele">
-                                    Žadatel<span class="sort-ind" aria-hidden="true"></span>
+                                    Žadatel<span class="sort-ind" aria-hidden="true">▲▼</span>
                                 </button>
                             </th>
                             <th scope="col" class="sort-cell">
                                 <button type="button" class="th-sort" data-sort="requester_email" aria-label="Řadit podle e-mailu">
-                                    E-mail<span class="sort-ind" aria-hidden="true"></span>
+                                    E-mail<span class="sort-ind" aria-hidden="true">▲▼</span>
                                 </button>
                             </th>
                             <th scope="col" class="sort-cell">
                                 <button type="button" class="th-sort" data-sort="city" aria-label="Řadit podle města">
-                                    Město<span class="sort-ind" aria-hidden="true"></span>
+                                    Město<span class="sort-ind" aria-hidden="true">▲▼</span>
                                 </button>
                             </th>
                             <th scope="col" class="sort-cell">
                                 <button type="button" class="th-sort" data-sort="term" aria-label="Řadit podle termínu">
-                                    Termín<span class="sort-ind" aria-hidden="true"></span>
+                                    Termín<span class="sort-ind" aria-hidden="true">▲▼</span>
                                 </button>
                             </th>
                             <th scope="col"></th>
@@ -102,8 +128,8 @@
         </div>
     </footer>
 
-    <script src="/js/common.js"></script>
-    <script src="/js/auth.js"></script>
+    <script src="/js/common.js?v=3"></script>
+    <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
         (function () {
@@ -118,6 +144,17 @@
             const filterForm = document.getElementById("filter-form");
             const statusFilter = document.getElementById("status-filter");
             const requestsTable = document.getElementById("requests-table");
+            const inboxWrap = document.getElementById("inbox-priority-wrap");
+            const inboxGrid = document.getElementById("inbox-priority-grid");
+            const inboxBlockUrgent = document.getElementById("inbox-block-urgent");
+            const inboxBlockNew = document.getElementById("inbox-block-new");
+            const inboxBlockStorno = document.getElementById("inbox-block-storno");
+            const inboxListUrgent = document.getElementById("inbox-list-urgent");
+            const inboxListNew = document.getElementById("inbox-list-new");
+            const inboxListStorno = document.getElementById("inbox-list-storno");
+            const inboxCountUrgent = document.getElementById("inbox-count-urgent");
+            const inboxCountNew = document.getElementById("inbox-count-new");
+            const inboxCountStorno = document.getElementById("inbox-count-storno");
 
             /** @type {object[]} */
             let listData = [];
@@ -132,6 +169,123 @@
                 BOOKED: 2,
                 CANCELLED: 3,
             };
+
+            function isActiveWorkflow(r) {
+                return r.status !== "BOOKED" && r.status !== "CANCELLED";
+            }
+
+            function inboxUrgentRows(rows) {
+                return rows.filter(
+                    (r) => r.urgency === "URGENT" && isActiveWorkflow(r)
+                );
+            }
+
+            function inboxNewStandardRows(rows) {
+                return rows.filter(
+                    (r) => r.status === "NEW" && r.urgency !== "URGENT"
+                );
+            }
+
+            function inboxStornoRows(rows) {
+                return rows.filter(
+                    (r) => r.status === "CANCELLED" && r.was_ever_booked === true
+                );
+            }
+
+            const INBOX_PREVIEW_MAX = 4;
+
+            function inboxSortByTermAsc(rows) {
+                return [...rows].sort((a, b) => {
+                    const c = String(a.date_from).localeCompare(String(b.date_from));
+                    return c !== 0 ? c : String(a.date_to).localeCompare(String(b.date_to));
+                });
+            }
+
+            function inboxRowHtml(r, opts) {
+                const showUrgency = opts && opts.showUrgency;
+                const idEnc = encodeURIComponent(r.id);
+                const href = "/admin/requests/" + idEnc;
+                const chip =
+                    showUrgency && r.urgency === "URGENT"
+                        ? HotelCommon.urgencyChipHtml(r.urgency, r.urgency_reason)
+                        : "";
+                const name = HotelCommon.escapeHtml(r.requester_name);
+                const city = HotelCommon.escapeHtml(r.city);
+                const term = `${HotelCommon.escapeHtml(r.date_from)} – ${HotelCommon.escapeHtml(r.date_to)}`;
+                return `<li class="inbox-bento-li">
+  <a class="inbox-bento-row" href="${href}">
+    <span class="inbox-bento-row__lead">${chip}<span class="inbox-bento-row__name">${name}</span></span>
+    <span class="inbox-bento-row__city" title="Město">${city}</span>
+    <span class="inbox-bento-row__term" title="Termín">${term}</span>
+    <span class="inbox-bento-row__detail">Detail</span>
+  </a>
+</li>`;
+            }
+
+            function setInboxBlock(blockEl, listEl, countEl, items, rowOpts) {
+                if (!items.length) {
+                    blockEl.hidden = true;
+                    listEl.innerHTML = "";
+                    if (countEl) {
+                        countEl.textContent = "0";
+                    }
+                    return;
+                }
+                blockEl.hidden = false;
+                const total = items.length;
+                const preview = inboxSortByTermAsc(items).slice(0, INBOX_PREVIEW_MAX);
+                if (countEl) {
+                    countEl.textContent = String(total);
+                }
+                listEl.innerHTML = preview.map((r) => inboxRowHtml(r, rowOpts)).join("");
+            }
+
+            function renderInbox() {
+                if (!listData.length) {
+                    inboxWrap.hidden = true;
+                    if (inboxGrid) {
+                        inboxGrid.setAttribute("data-inbox-layout", "0");
+                    }
+                    return;
+                }
+                const urgent = inboxUrgentRows(listData);
+                const newStd = inboxNewStandardRows(listData);
+                const storno = inboxStornoRows(listData);
+                setInboxBlock(
+                    inboxBlockUrgent,
+                    inboxListUrgent,
+                    inboxCountUrgent,
+                    urgent,
+                    { showUrgency: true }
+                );
+                setInboxBlock(inboxBlockNew, inboxListNew, inboxCountNew, newStd, {
+                    showUrgency: false,
+                });
+                setInboxBlock(
+                    inboxBlockStorno,
+                    inboxListStorno,
+                    inboxCountStorno,
+                    storno,
+                    { showUrgency: false }
+                );
+                const nU = urgent.length ? 1 : 0;
+                const nN = newStd.length ? 1 : 0;
+                const nS = storno.length ? 1 : 0;
+                const nVisible = nU + nN + nS;
+                if (inboxGrid) {
+                    if (nVisible === 3) {
+                        inboxGrid.setAttribute("data-inbox-layout", "bento-3");
+                    } else if (nVisible === 2) {
+                        inboxGrid.setAttribute("data-inbox-layout", "cols-2");
+                    } else if (nVisible === 1) {
+                        inboxGrid.setAttribute("data-inbox-layout", "single");
+                    } else {
+                        inboxGrid.setAttribute("data-inbox-layout", "0");
+                    }
+                }
+                const any = nVisible > 0;
+                inboxWrap.hidden = !any;
+            }
 
             function showMessage(type, html) {
                 msgEl.className = "message " + type;
@@ -195,9 +349,13 @@
                         }
                     } else {
                         btn.removeAttribute("aria-sort");
-                        btn.removeAttribute("title");
+                        btn.setAttribute(
+                            "title",
+                            "Řadit podle tohoto sloupce (vzestupně / sestupně)"
+                        );
                         if (ind) {
-                            ind.textContent = "";
+                            /* Visible default: sortable columns show up/down chevrons before first click */
+                            ind.textContent = "\u25B2\u25BC";
                         }
                     }
                 });
@@ -208,6 +366,7 @@
                     emptyHint.hidden = false;
                     requestsTable.hidden = true;
                     tbody.innerHTML = "";
+                    renderInbox();
                     updateSortIndicators();
                     return;
                 }
@@ -217,8 +376,12 @@
                 tbody.innerHTML = rows
                     .map((r) => {
                         const idEnc = encodeURIComponent(r.id);
+                        const chip = HotelCommon.urgencyChipHtml(
+                            r.urgency,
+                            r.urgency_reason
+                        );
                         return `<tr>
-              <td><span class="status-pill">${HotelCommon.escapeHtml(r.status)}</span></td>
+              <td class="status-and-urgency-cell"><span class="status-pill" data-status="${HotelCommon.escapeHtml(r.status)}">${HotelCommon.escapeHtml(HotelCommon.statusLabel(r.status))}</span>${chip}</td>
               <td>${HotelCommon.escapeHtml(r.requester_name)}</td>
               <td>${HotelCommon.escapeHtml(r.requester_email)}</td>
               <td>${HotelCommon.escapeHtml(r.city)}</td>
@@ -227,6 +390,7 @@
             </tr>`;
                     })
                     .join("");
+                renderInbox();
                 updateSortIndicators();
             }
 

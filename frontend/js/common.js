@@ -21,5 +21,37 @@
         return div.innerHTML;
     }
 
-    global.HotelCommon = { parseErrorDetail, escapeHtml };
+    /** Internal API status → Czech UI label (values unchanged in DOM/API). */
+    const STATUS_LABELS = {
+        NEW: "Nová",
+        IN_PROGRESS: "V řešení",
+        BOOKED: "Rezervováno",
+        CANCELLED: "Zrušeno",
+    };
+
+    function statusLabel(status) {
+        if (status == null || status === "") {
+            return "";
+        }
+        const key = String(status);
+        return STATUS_LABELS[key] ?? key;
+    }
+
+    /** Urgency badge (API: STANDARD | URGENT) — only render for urgent to avoid visual noise. */
+    function urgencyChipHtml(urgency, reason) {
+        if (urgency !== "URGENT") {
+            return "";
+        }
+        const t = reason ? escapeHtml(String(reason)) : "";
+        const title = t ? ` title="${t}"` : "";
+        return `<span class="urgency-chip"${title} aria-label="Urgentní požadavek">Urgentní</span>`;
+    }
+
+    global.HotelCommon = Object.assign({}, global.HotelCommon || {}, {
+        parseErrorDetail,
+        escapeHtml,
+        STATUS_LABELS,
+        statusLabel,
+        urgencyChipHtml,
+    });
 })(window);
