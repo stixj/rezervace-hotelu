@@ -81,23 +81,6 @@
             body.bed_preference = null;
         }
 
-        if (window.__HOTEL_PREVIEW__) {
-            const fakeId =
-                typeof crypto !== "undefined" && crypto.randomUUID
-                    ? crypto.randomUUID()
-                    : "demo-" + String(Date.now());
-            showMessage(
-                msgEl,
-                "success",
-                "<strong>(Náhled)</strong> Toto je simulace — žádost se neodeslala. " +
-                    `Ukázkové ID: <code style="word-break:break-all">${escapeHtml(fakeId)}</code>`
-            );
-            form.reset();
-            toggleBedPreference();
-            submitBtn.disabled = false;
-            return;
-        }
-
         try {
             const res = await fetch(`${API_BASE}/reservations`, {
                 method: "POST",
@@ -136,20 +119,6 @@
             showMessage(lookupMsg, "error", "Vyplňte UUID žádosti.");
             return;
         }
-        if (window.__HOTEL_PREVIEW__) {
-            lookupResult.innerHTML = `
-        <p class="page-lead" style="margin-bottom:12px"><strong>(Náhled)</strong> Ukázkový stav žádosti — bez napojení na server.</p>
-        <div class="status-badge">NEW</div>
-        <dl class="status-detail">
-          <dt>Město</dt><dd>Praha</dd>
-          <dt>Od – do</dt><dd>2026-04-01 – 2026-04-03</dd>
-          <dt>Typ pokoje</dt><dd>single</dd>
-          <dt>Hotel / číslo rezervace</dt><dd>— / —</dd>
-        </dl>`;
-            lookupResult.hidden = false;
-            return;
-        }
-
         try {
             const res = await fetch(`${API_BASE}/reservations/${encodeURIComponent(id)}`);
             const data = await res.json().catch(() => ({}));

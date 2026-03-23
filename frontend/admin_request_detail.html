@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail žádosti (recepce)</title>
-    <link rel="stylesheet" href="css/direct-theme.css">
-    <script src="js/config.js"></script>
+    <link rel="stylesheet" href="/css/direct-theme.css">
+    <script src="/js/config.js"></script>
 </head>
 <body>
     <header class="header">
@@ -75,24 +75,20 @@
         </div>
     </footer>
 
-    <script src="js/common.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/nav.js"></script>
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/nav.js"></script>
     <script>
         (function () {
             if (!HotelAuth.getToken()) {
-                window.hotelGo("/login");
+                window.location.href = "/login";
                 return;
             }
 
-            const params = new URLSearchParams(window.location.search);
-            let rid = params.get("id");
+            const m = window.location.pathname.match(/\/admin\/requests\/([^/]+)/);
+            const rid = m ? m[1] : null;
             if (!rid) {
-                const m = window.location.pathname.match(/\/admin\/requests\/([^/]+)/);
-                rid = m ? decodeURIComponent(m[1]) : null;
-            }
-            if (!rid) {
-                window.hotelGo("/admin/requests");
+                window.location.href = "/admin/requests";
                 return;
             }
 
@@ -121,7 +117,7 @@
                 );
                 const me = await meRes.json().catch(() => ({}));
                 if (!meRes.ok || me.role !== "RECEPTION") {
-                    window.hotelGo("/app/new");
+                    window.location.href = "/app/new";
                     return;
                 }
 
@@ -174,7 +170,7 @@
                         showMessage("error", HotelCommon.parseErrorDetail(sd));
                         return;
                     }
-                    window.hotelGo("/admin/requests");
+                    window.location.href = "/admin/requests";
                 });
             })();
         })();

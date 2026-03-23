@@ -8,8 +8,7 @@
     const token = localStorage.getItem("hotel_auth_token");
 
     function renderLoginLink() {
-        nav.innerHTML =
-            '<a href="' + window.hotelUiHref("/login") + '">Přihlásit</a>';
+        nav.innerHTML = '<a href="/login">Přihlásit</a>';
     }
 
     if (!token) {
@@ -33,9 +32,7 @@
             return;
         }
 
-        const path = window.hotelNavPath
-            ? window.hotelNavPath()
-            : window.location.pathname || "";
+        const path = window.location.pathname || "";
         /** Reception uses admin list only; employee flows are hidden. */
         const items =
             me.role === "RECEPTION"
@@ -64,8 +61,7 @@
                 active = true;
             }
             const cls = active ? ' class="active"' : "";
-            const href = window.hotelUiHref(i.href);
-            return `<a href="${href}"${cls}>${i.label}</a>`;
+            return `<a href="${i.href}"${cls}>${i.label}</a>`;
         });
 
         parts.push(
@@ -75,7 +71,7 @@
 
         document.getElementById("nav-logout").addEventListener("click", () => {
             localStorage.removeItem("hotel_auth_token");
-            window.hotelGo("/login");
+            window.location.href = "/login";
         });
     })();
 })();
