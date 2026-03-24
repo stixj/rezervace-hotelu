@@ -132,6 +132,28 @@ class ReservationUpdate(BaseModel):
     room_type: Optional[RoomType] = None
     bed_preference: Optional[BedPreference] = None
     note: Optional[str] = None
+    urgency: Optional[RequestUrgency] = None
+    urgency_reason: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("urgency_reason")
+    @classmethod
+    def urgency_reason_stripped_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = v.strip()
+        return s if s else None
+
+    @model_validator(mode="after")
+    def validate_urgency_reason_update(self):
+        u = self.urgency
+        if u is None:
+            return self
+        if u == RequestUrgency.URGENT:
+            if not self.urgency_reason:
+                raise ValueError("urgency_reason is required when urgency is URGENT")
+        elif u == RequestUrgency.STANDARD:
+            self.urgency_reason = None
+        return self
 
     @field_validator("city")
     @classmethod
@@ -170,6 +192,21 @@ class StatusUpdateBody(BaseModel):
     status: RequestStatus
     hotel_name: Optional[str] = None
     reservation_number: Optional[str] = None
+
+
+class ChangeRequestFieldRead(BaseModel):
+    """Single field diff for reception / employee (human-readable values)."""
+
+    field_key: str
+    label: str
+    old_value: str
+    new_value: str
+
+
+class PendingChangeRead(BaseModel):
+    submitted_at: datetime
+    reservation_status_at_submit: RequestStatus
+    changes: list[ChangeRequestFieldRead]
 
 
 class ReceptionInternalNoteBody(BaseModel):
@@ -214,6 +251,7 @@ class ReservationRead(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
     cancelled_at: Optional[datetime]
+    pending_change: Optional[PendingChangeRead] = None
 
 
 class AdminReservationRead(ReservationRead):

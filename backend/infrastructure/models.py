@@ -93,3 +93,7 @@ class ReservationRequest(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
+    pending_change_submitted_at: Optional[datetime] = None
+    pending_change_json: Optional[str] = Field(
+        default=None, sa_column=Column(Text, nullable=True)
+    )

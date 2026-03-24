@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime
@@ -19,6 +20,8 @@ from infrastructure.models import (
 )
 from schemas.reservation import (
     AdminReservationRead,
+    ChangeRequestFieldRead,
+    PendingChangeRead,
     ReceptionInternalNoteBody,
     ReservationCreate,
     ReservationRead,
@@ -47,6 +50,9 @@ def _reservation_read_from_row(row: ReservationRequest) -> ReservationRead:
     if read.staying_person_count == 1:
         updates["secondary_guest_name"] = None
         updates["secondary_guest_email"] = None
+    pc = _pending_change_read(row)
+    if pc is not None:
+        updates["pending_change"] = pc
     return read.model_copy(update=updates) if updates else read
 
 
@@ -55,6 +61,254 @@ def _admin_reservation_read_from_row(row: ReservationRequest) -> AdminReservatio
     return AdminReservationRead.model_validate(
         {**base.model_dump(), "reception_internal_note": row.reception_internal_note}
     )
+
+
+def _note_normalized(note: Optional[str]) -> Optional[str]:
+    if note is None:
+        return None
+    s = str(note).strip()
+    return s if s else None
+
+
+def _cs_room_type(rt) -> str:
+    v = rt.value if hasattr(rt, "value") else str(rt)
+    return {"single": "Jednolůžkový pokoj", "multi": "Dvoulůžkový pokoj"}.get(v, v)
+
+
+def _cs_bed(bp) -> str:
+    if bp is None:
+        return "—"
+    v = bp.value if hasattr(bp, "value") else str(bp)
+    return {"double": "Manželská postel", "twin": "Oddělená lůžka"}.get(v, v)
+
+
+def _cs_reservation_for(rf) -> str:
+    if rf == ReservationFor.COLLEAGUE:
+        return "Pro jiného kolegu"
+    if rf == ReservationFor.SELF:
+        return "Pro mě"
+    return str(rf)
+
+
+def _cs_staying_count(n: int) -> str:
+    return "2 osoby" if n == 2 else "1 osoba"
+
+
+def _guest_display(name: Optional[str], email: Optional[str]) -> str:
+    n = (name or "").strip()
+    e = (email or "").strip()
+    if n and e:
+        return f"{n} <{e}>"
+    if n:
+        return n
+    if e:
+        return e
+    return "—"
+
+
+def _cs_urgency(u, reason: Optional[str]) -> str:
+    if u == RequestUrgency.URGENT:
+        return f"Urgentní — {reason or '—'}"
+    return "Běžná"
+
+
+def _clone_row_normalized(row: ReservationRequest) -> ReservationRequest:
+    c = ReservationRequest(
+        user_id=row.user_id,
+        requester_name=row.requester_name,
+        requester_email=row.requester_email,
+        reservation_for=row.reservation_for,
+        staying_person_count=row.staying_person_count,
+        primary_guest_name=row.primary_guest_name,
+        primary_guest_email=row.primary_guest_email,
+        secondary_guest_name=row.secondary_guest_name,
+        secondary_guest_email=row.secondary_guest_email,
+        city=row.city,
+        date_from=row.date_from,
+        date_to=row.date_to,
+        room_type=row.room_type,
+        bed_preference=row.bed_preference,
+        note=row.note,
+        urgency=row.urgency,
+        urgency_reason=row.urgency_reason,
+        status=row.status,
+        hotel_name=row.hotel_name,
+        reservation_number=row.reservation_number,
+    )
+    _normalize_row_guest_fields(c)
+    return c
+
+
+def _proposed_row_from_create(
+    row: ReservationRequest, data: ReservationCreate, user: User
+) -> ReservationRequest:
+    if data.reservation_for == ReservationFor.SELF:
+        primary_name = data.requester_name.strip()
+        primary_email = _normalize_email(user.email)
+    else:
+        primary_name = (data.primary_guest_name or "").strip()
+        primary_email = _normalize_email(data.primary_guest_email or "")
+    final_rt = data.room_type
+    final_bed = None if final_rt == RoomType.SINGLE else data.bed_preference
+    _apply_bed_preference_rules(final_rt, final_bed)
+    c = ReservationRequest(
+        user_id=row.user_id,
+        requester_name=data.requester_name.strip(),
+        requester_email=row.requester_email,
+        reservation_for=data.reservation_for,
+        staying_person_count=data.staying_person_count,
+        primary_guest_name=primary_name,
+        primary_guest_email=primary_email,
+        secondary_guest_name=data.secondary_guest_name,
+        secondary_guest_email=data.secondary_guest_email,
+        city=data.city,
+        date_from=data.date_from,
+        date_to=data.date_to,
+        room_type=data.room_type,
+        bed_preference=final_bed,
+        note=data.note,
+        urgency=data.urgency,
+        urgency_reason=data.urgency_reason,
+        status=row.status,
+        hotel_name=row.hotel_name,
+        reservation_number=row.reservation_number,
+    )
+    _normalize_row_guest_fields(c)
+    return c
+
+
+# Reception scans this list first — room/occupancy/guests affect the hotel booking.
+_CHANGE_DIFF_FIELD_ORDER: List[str] = [
+    "room_type",
+    "bed_preference",
+    "staying_person_count",
+    "secondary_guest",
+    "primary_guest",
+    "stay_dates",
+    "city",
+    "reservation_for",
+    "note",
+    "urgency",
+    "requester_name",
+]
+
+
+def _sort_change_diff_fields(items: List[ChangeRequestFieldRead]) -> List[ChangeRequestFieldRead]:
+    rank = {k: i for i, k in enumerate(_CHANGE_DIFF_FIELD_ORDER)}
+    return sorted(items, key=lambda c: (rank.get(c.field_key, 1_000), c.field_key))
+
+
+def _build_change_diff(
+    curr: ReservationRequest, prop: ReservationRequest
+) -> List[ChangeRequestFieldRead]:
+    out: List[ChangeRequestFieldRead] = []
+
+    def add(key: str, label: str, old_v: str, new_v: str) -> None:
+        if old_v != new_v:
+            out.append(
+                ChangeRequestFieldRead(
+                    field_key=key, label=label, old_value=old_v, new_value=new_v
+                )
+            )
+
+    add("city", "Město", str(curr.city), str(prop.city))
+    add(
+        "stay_dates",
+        "Termín pobytu",
+        f"{curr.date_from} – {curr.date_to}",
+        f"{prop.date_from} – {prop.date_to}",
+    )
+    add(
+        "room_type",
+        "Typ pokoje",
+        _cs_room_type(curr.room_type),
+        _cs_room_type(prop.room_type),
+    )
+    add(
+        "bed_preference",
+        "Rozložení lůžek",
+        _cs_bed(curr.bed_preference if curr.room_type != RoomType.SINGLE else None),
+        _cs_bed(prop.bed_preference if prop.room_type != RoomType.SINGLE else None),
+    )
+    add(
+        "reservation_for",
+        "Pro koho je rezervace",
+        _cs_reservation_for(curr.reservation_for),
+        _cs_reservation_for(prop.reservation_for),
+    )
+    if (
+        curr.reservation_for != ReservationFor.SELF
+        or prop.reservation_for != ReservationFor.SELF
+    ):
+        add(
+            "primary_guest",
+            "Hlavní ubytovaná osoba",
+            _guest_display(curr.primary_guest_name, curr.primary_guest_email),
+            _guest_display(prop.primary_guest_name, prop.primary_guest_email),
+        )
+    sec_old = (
+        _guest_display(curr.secondary_guest_name, curr.secondary_guest_email)
+        if curr.staying_person_count == 2
+        else "—"
+    )
+    sec_new = (
+        _guest_display(prop.secondary_guest_name, prop.secondary_guest_email)
+        if prop.staying_person_count == 2
+        else "—"
+    )
+    add("secondary_guest", "Druhá ubytovaná osoba", sec_old, sec_new)
+    add(
+        "staying_person_count",
+        "Počet ubytovaných osob",
+        _cs_staying_count(curr.staying_person_count),
+        _cs_staying_count(prop.staying_person_count),
+    )
+    add(
+        "note",
+        "Poznámka",
+        _note_normalized(curr.note) or "—",
+        _note_normalized(prop.note) or "—",
+    )
+    add(
+        "urgency",
+        "Urgence",
+        _cs_urgency(curr.urgency, curr.urgency_reason),
+        _cs_urgency(prop.urgency, prop.urgency_reason),
+    )
+    add(
+        "requester_name",
+        "Jméno a příjmení (podávající)",
+        curr.requester_name.strip(),
+        prop.requester_name.strip(),
+    )
+    return _sort_change_diff_fields(out)
+
+
+def _pending_change_read(row: ReservationRequest) -> Optional[PendingChangeRead]:
+    if not row.pending_change_submitted_at or not row.pending_change_json:
+        return None
+    try:
+        raw = json.loads(row.pending_change_json)
+        st = raw.get("status_at_submit")
+        status = RequestStatus(st) if st else RequestStatus.IN_PROGRESS
+        items = [
+            ChangeRequestFieldRead(
+                field_key=c["field_key"],
+                label=c["label"],
+                old_value=c["old_value"],
+                new_value=c["new_value"],
+            )
+            for c in raw.get("changes", [])
+        ]
+        items = _sort_change_diff_fields(items)
+        return PendingChangeRead(
+            submitted_at=row.pending_change_submitted_at,
+            reservation_status_at_submit=status,
+            changes=items,
+        )
+    except (json.JSONDecodeError, KeyError, ValueError, TypeError):
+        logger.warning("Invalid pending_change_json for reservation id=%s", row.id)
+        return None
 
 
 def _reception_recipients() -> List[str]:
@@ -264,6 +518,13 @@ def update_reservation(
     if data.note is not None:
         row.note = data.note
 
+    if data.urgency is not None:
+        row.urgency = data.urgency
+        if data.urgency == RequestUrgency.STANDARD:
+            row.urgency_reason = None
+        else:
+            row.urgency_reason = data.urgency_reason
+
     _normalize_row_guest_fields(row)
 
     row.updated_at = datetime.utcnow()
@@ -322,6 +583,80 @@ def cancel_reservation(session: Session, reservation_id: UUID, user: User) -> Re
         )
     _notify_reception_safe(f"[Hotel] Zrušení požadavku {row.id}", text)
     return _reservation_read_from_row(row)
+
+
+def submit_change_request(
+    session: Session, reservation_id: UUID, data: ReservationCreate, user: User
+) -> ReservationRead:
+    row = session.get(ReservationRequest, reservation_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    _ensure_employee_owns(row, user)
+    if row.status not in (RequestStatus.IN_PROGRESS, RequestStatus.BOOKED):
+        raise HTTPException(
+            status_code=400,
+            detail="Požadavek na změnu lze podat jen ve stavu „V řešení“ nebo „Rezervováno“.",
+        )
+    if row.pending_change_submitted_at and row.pending_change_json:
+        raise HTTPException(
+            status_code=400,
+            detail="U této žádosti už čeká požadavek na změnu na zpracování recepcí.",
+        )
+    if data.date_to < data.date_from:
+        raise HTTPException(status_code=400, detail="Datum odjezdu musí být po příjezdu.")
+
+    curr = _clone_row_normalized(row)
+    prop = _proposed_row_from_create(row, data, user)
+    changes = _build_change_diff(curr, prop)
+    if not changes:
+        raise HTTPException(
+            status_code=400,
+            detail="Nebyla zadána žádná změna oproti aktuálním údajům.",
+        )
+
+    now = datetime.utcnow()
+    payload = {
+        "status_at_submit": _enum_str(row.status),
+        "changes": [c.model_dump() for c in changes],
+    }
+    row.pending_change_submitted_at = now
+    row.pending_change_json = json.dumps(payload, ensure_ascii=False)
+    row.updated_at = now
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    logger.info("Change request submitted id=%s fields=%s", row.id, len(changes))
+
+    ctx = "rezervované žádosti" if row.status == RequestStatus.BOOKED else "rozpracované žádosti"
+    diff_lines = "\n".join(f"- {c.label}: „{c.old_value}“ → „{c.new_value}“" for c in changes)
+    body = (
+        f"Žadatel podal požadavek na změnu u {ctx}.\n"
+        f"ID: {row.id}\n"
+        f"Žadatel: {row.requester_name} <{row.requester_email}>\n"
+        f"Stav žádosti: {_enum_str(row.status)}\n\n"
+        f"Požadované změny:\n{diff_lines}\n"
+    )
+    subj = (
+        f"[Hotel] Změna po rezervaci — ke kontrole {row.id}"
+        if row.status == RequestStatus.BOOKED
+        else f"[Hotel] Požadavek na změnu žádosti {row.id}"
+    )
+    _notify_reception_safe(subj, body)
+    return _reservation_read_from_row(row)
+
+
+def clear_pending_change_request(session: Session, reservation_id: UUID) -> AdminReservationRead:
+    row = session.get(ReservationRequest, reservation_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    row.pending_change_submitted_at = None
+    row.pending_change_json = None
+    row.updated_at = datetime.utcnow()
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    logger.info("Pending change cleared id=%s", row.id)
+    return _admin_reservation_read_from_row(row)
 
 
 def list_admin_reservations(

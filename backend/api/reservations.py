@@ -4,7 +4,11 @@ from fastapi import APIRouter
 
 from api.dependencies import EmployeeUser, SessionDep
 from application import reservation_service as reservation_service
-from schemas.reservation import ReservationCreate, ReservationRead, ReservationUpdate
+from schemas.reservation import (
+    ReservationCreate,
+    ReservationRead,
+    ReservationUpdate,
+)
 
 router = APIRouter()
 
@@ -31,6 +35,16 @@ def update_reservation(
     body: ReservationUpdate,
 ) -> ReservationRead:
     return reservation_service.update_reservation(session, reservation_id, body, user)
+
+
+@router.post("/{reservation_id}/change-request", response_model=ReservationRead)
+def submit_change_request(
+    session: SessionDep,
+    user: EmployeeUser,
+    reservation_id: UUID,
+    body: ReservationCreate,
+) -> ReservationRead:
+    return reservation_service.submit_change_request(session, reservation_id, body, user)
 
 
 @router.post("/{reservation_id}/cancel", response_model=ReservationRead)

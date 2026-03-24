@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail žádosti (recepce)</title>
-    <link rel="stylesheet" href="/css/direct-theme.css">
+    <link rel="stylesheet" href="/css/direct-theme.css?v=8">
     <script src="/js/config.js"></script>
 </head>
 <body>
@@ -36,6 +36,14 @@
 
         <div id="page-message" class="message" hidden role="status"></div>
 
+        <div
+            id="reception-change-banner"
+            class="reception-change-banner"
+            hidden
+            role="region"
+            aria-label="Požadavek žadatele na změnu"
+        ></div>
+
         <div id="request-priority-strip" class="request-priority-strip" hidden></div>
 
         <div class="form-container loaded request-detail-page" id="detail-block" hidden>
@@ -47,6 +55,30 @@
                     Přehled
                 </h2>
                 <div id="readonly-priority"></div>
+                <p
+                    id="reception-baseline-hint"
+                    class="reception-baseline-hint"
+                    hidden
+                    role="note"
+                ></p>
+            </section>
+
+            <section
+                class="reception-change-section"
+                id="reception-change-section"
+                hidden
+                aria-labelledby="reception-change-section-heading"
+            >
+                <h2 id="reception-change-section-heading" class="request-panel-heading">
+                    Požadované změny
+                </h2>
+                <p class="reception-change-section__lead" id="reception-change-section-lead"></p>
+                <div id="reception-change-diff-wrap"></div>
+                <div class="form-actions reception-change-section__actions">
+                    <button type="button" class="ghost" id="clear-pending-change-btn">
+                        Změnu jsem zapracoval/a — skrýt požadavek
+                    </button>
+                </div>
             </section>
 
             <div class="request-detail-body-grid">
@@ -140,7 +172,7 @@
         </div>
     </footer>
 
-    <script src="/js/common.js?v=6"></script>
+    <script src="/js/common.js?v=8"></script>
     <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
@@ -158,6 +190,12 @@
             }
 
             const msgEl = document.getElementById("page-message");
+            const changeBanner = document.getElementById("reception-change-banner");
+            const changeSection = document.getElementById("reception-change-section");
+            const changeSectionLead = document.getElementById("reception-change-section-lead");
+            const changeDiffWrap = document.getElementById("reception-change-diff-wrap");
+            const baselineHint = document.getElementById("reception-baseline-hint");
+            const clearPendingBtn = document.getElementById("clear-pending-change-btn");
             const priorityStrip = document.getElementById("request-priority-strip");
             const block = document.getElementById("detail-block");
             const readonlyPriority = document.getElementById("readonly-priority");
@@ -311,6 +349,17 @@
                         `<div class="priority-strip-row priority-strip-row--urgent"><strong>Priorita urgentní.</strong> ${HotelCommon.escapeHtml(r.urgency_reason || "—")}</div>`
                     );
                 }
+                if (r.pending_change && r.pending_change.changes && r.pending_change.changes.length) {
+                    const postBooking =
+                        r.pending_change.reservation_status_at_submit === "BOOKED";
+                    const stripCls = postBooking
+                        ? "priority-strip-row priority-strip-row--change-post-booking"
+                        : "priority-strip-row priority-strip-row--change-pending";
+                    const stripText = postBooking
+                        ? "Změna rezervace ke kontrole — ověřte dopad na rezervaci v hotelu."
+                        : "Žadatel požaduje změnu již rozpracované žádosti.";
+                    stripParts.push(`<div class="${stripCls}"><strong>Požadavek na změnu.</strong> ${stripText}</div>`);
+                }
                 if (r.status === "CANCELLED" && r.was_ever_booked === true) {
                     stripParts.push(
                         `<div class="priority-strip-row priority-strip-row--storno">Zrušeno po rezervaci — ke kontrole (operativa / hotel).</div>`
@@ -323,7 +372,74 @@
                     priorityStrip.innerHTML = "";
                     priorityStrip.hidden = true;
                 }
+
+                const hasPc = !!(r.pending_change && r.pending_change.changes && r.pending_change.changes.length);
+                if (hasPc) {
+                    const postBooking =
+                        r.pending_change.reservation_status_at_submit === "BOOKED";
+                    changeBanner.className =
+                        "reception-change-banner" +
+                        (postBooking ? " reception-change-banner--post-booking" : "");
+                    const lk = HotelCommon.CHANGE_DIFF_LODGING_KEYS;
+                    const lodgingChanges = r.pending_change.changes.filter(
+                        (c) => c.field_key && lk.has(String(c.field_key))
+                    );
+                    let bannerInner = postBooking
+                        ? "<p><strong>Žadatel požaduje změnu již rezervované žádosti.</strong> Ověřte dopad na rezervaci v hotelu.</p>"
+                        : "<p><strong>Žadatel požaduje změnu již rozpracované žádosti.</strong> Údaje v přehledu a v blocích Osoby / Pobyt jsou stav před zapracováním; tabulka v sekci Požadované změny ukazuje navrhované hodnoty.</p>";
+                    if (lodgingChanges.length) {
+                        const parts = lodgingChanges.map((c) =>
+                            HotelCommon.escapeHtml(String(c.label))
+                        );
+                        bannerInner +=
+                            '<p class="reception-change-banner__lodging">Dotýká se rezervace v hotelu: ' +
+                            parts.join(" · ") +
+                            "</p>";
+                    }
+                    changeBanner.innerHTML = bannerInner;
+                    changeBanner.hidden = false;
+                    baselineHint.textContent =
+                        "Přehled, Osoby a Pobyt = údaje platné v systému před touto změnou. Sloupce Původní → Požadováno v sekci Požadované změny = přesný rozdíl.";
+                    baselineHint.hidden = false;
+                    changeSection.hidden = false;
+                    const sub = r.pending_change.submitted_at
+                        ? HotelCommon.formatRequestSubmittedPlain(r.pending_change.submitted_at)
+                        : "";
+                    changeSectionLead.textContent = sub
+                        ? "Podáno " + sub + " — zohledněte při dalším zpracování."
+                        : "Zohledněte při dalším zpracování.";
+                    changeDiffWrap.innerHTML = HotelCommon.changeDiffTableHtml(
+                        r.pending_change.changes
+                    );
+                } else {
+                    changeBanner.hidden = true;
+                    changeBanner.innerHTML = "";
+                    changeSection.hidden = true;
+                    changeSectionLead.textContent = "";
+                    changeDiffWrap.innerHTML = "";
+                    baselineHint.hidden = true;
+                    baselineHint.textContent = "";
+                }
                 block.hidden = false;
+
+                clearPendingBtn.hidden = !hasPc;
+                if (hasPc) {
+                    clearPendingBtn.addEventListener("click", async () => {
+                        clearPendingBtn.disabled = true;
+                        const { res: cr, data: cd } = await HotelAuth.apiJson(
+                            "/admin/reservations/" +
+                                encodeURIComponent(rid) +
+                                "/pending-change/clear",
+                            { method: "POST" }
+                        );
+                        clearPendingBtn.disabled = false;
+                        if (!cr.ok) {
+                            showMessage("error", HotelCommon.parseErrorDetail(cd));
+                            return;
+                        }
+                        window.location.reload();
+                    });
+                }
 
                 saveReceptionNoteBtn.addEventListener("click", async () => {
                     saveReceptionNoteBtn.disabled = true;

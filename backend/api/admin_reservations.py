@@ -49,3 +49,15 @@ def put_reception_internal_note(
     body: ReceptionInternalNoteBody,
 ) -> AdminReservationRead:
     return reservation_service.update_reception_internal_note(session, reservation_id, body)
+
+
+@router.post(
+    "/{reservation_id}/pending-change/clear",
+    response_model=AdminReservationRead,
+)
+def clear_pending_change(
+    session: SessionDep,
+    _: ReceptionUser,
+    reservation_id: UUID,
+) -> AdminReservationRead:
+    return reservation_service.clear_pending_change_request(session, reservation_id)

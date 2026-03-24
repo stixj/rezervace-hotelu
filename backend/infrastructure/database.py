@@ -212,6 +212,27 @@ def _migrate_reception_internal_note() -> None:
     logger.info("Migration: added reservation_request.reception_internal_note")
 
 
+def _migrate_pending_change_request() -> None:
+    """Pending employee change request (single active JSON payload + timestamp)."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if not insp.has_table("reservation_request"):
+        return
+    cols = {c["name"] for c in insp.get_columns("reservation_request")}
+    with engine.connect() as conn:
+        if "pending_change_submitted_at" not in cols:
+            conn.execute(
+                text("ALTER TABLE reservation_request ADD COLUMN pending_change_submitted_at DATETIME")
+            )
+            conn.commit()
+        if "pending_change_json" not in cols:
+            conn.execute(
+                text("ALTER TABLE reservation_request ADD COLUMN pending_change_json TEXT")
+            )
+            conn.commit()
+    logger.info("Migration: reservation_request pending change columns ensured")
+
+
 def init_db() -> None:
     # Import models so SQLModel registers metadata
     from infrastructure import models  # noqa: F401
@@ -222,6 +243,7 @@ def init_db() -> None:
     _migrate_reservation_guest_fields()
     _migrate_guest_fields_coherence()
     _migrate_reception_internal_note()
+    _migrate_pending_change_request()
     from application.auth_service import seed_bootstrap_users
 
     with Session(get_engine()) as session:

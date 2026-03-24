@@ -48,6 +48,165 @@
             <dl class="status-detail user-detail-dl" id="readonly-dl"></dl>
         </div>
 
+        <div class="form-container loaded user-detail-workflow-hint-wrap" id="detail-workflow-wrap" hidden>
+            <p class="user-detail-workflow-hint" id="detail-workflow-hint"></p>
+        </div>
+
+        <div class="form-container loaded employee-pending-change-panel" id="detail-pending-employee-wrap" hidden>
+            <p class="employee-pending-change-panel__title">Váš požadavek na změnu čeká na kontrolu recepce</p>
+            <p class="employee-pending-change-panel__meta" id="detail-pending-employee-meta"></p>
+            <div id="detail-pending-employee-diff" class="employee-pending-change-diff"></div>
+        </div>
+
+        <div class="form-container user-detail-change-wrap" id="detail-change-request" hidden>
+            <form id="change-form" novalidate>
+                <section class="form-section">
+                    <h2 class="section-title">Navrhované údaje (požadavek na změnu)</h2>
+                    <p class="form-hint change-request-form-lead">
+                        Údaje níže jsou jen návrhem. Potvrzené údaje žádosti zůstávají v přehledu výše, dokud recepce změnu nezapracuje.
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="requester_name_chg">Jméno a příjmení (podávající) <span class="required">*</span></label>
+                            <input id="requester_name_chg" name="requester_name_chg" type="text" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <span id="sec-for-chg" class="urgency-field-label">Pro koho je rezervace</span>
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-for-chg">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="reservation_for_chg" value="SELF" id="res_for_self_chg">
+                                    Pro mě
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="reservation_for_chg" value="COLLEAGUE" id="res_for_colleague_chg">
+                                    Pro jiného kolegu
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row" id="primary-guest-row-chg" hidden>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <h3 class="form-subsection-title">Hlavní ubytovaná osoba</h3>
+                        </div>
+                        <div class="form-group">
+                            <label for="primary_guest_name_chg">Jméno a příjmení <span class="required">*</span></label>
+                            <input id="primary_guest_name_chg" name="primary_guest_name_chg" type="text" autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="primary_guest_email_chg">E-mail <span class="required">*</span></label>
+                            <input id="primary_guest_email_chg" name="primary_guest_email_chg" type="email" autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <span id="sec-occupancy-chg" class="urgency-field-label">Počet ubytovaných osob</span>
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-occupancy-chg">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="staying_person_count_chg" value="1" id="occ_1_chg">
+                                    1 osoba
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="staying_person_count_chg" value="2" id="occ_2_chg">
+                                    2 osoby
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <section class="form-section" style="margin:0;padding:0;border:none;" id="secondary-guest-section-chg" hidden aria-labelledby="sec-second-guest-chg">
+                        <h3 id="sec-second-guest-chg" class="form-subsection-title">Druhá ubytovaná osoba</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="secondary_guest_name_chg">Jméno a příjmení <span class="required">*</span></label>
+                                <input id="secondary_guest_name_chg" name="secondary_guest_name_chg" type="text" autocomplete="name">
+                            </div>
+                            <div class="form-group">
+                                <label for="secondary_guest_email_chg">E-mail <span class="required">*</span></label>
+                                <input id="secondary_guest_email_chg" name="secondary_guest_email_chg" type="email" autocomplete="email">
+                            </div>
+                        </div>
+                    </section>
+                    <div class="form-row">
+                        <div class="form-group" id="city-preset-group-chg">
+                            <label for="city_preset_chg">Město <span class="required">*</span></label>
+                            <select id="city_preset_chg" name="city_preset_chg" required aria-describedby="city-chg-hint">
+                                <option value="" disabled>Vyberte město</option>
+                                <option value="Praha">Praha</option>
+                                <option value="Brno">Brno</option>
+                                <option value="__other__">Jiné město</option>
+                            </select>
+                            <span id="city-chg-hint" class="form-hint">
+                                Prahu a Brno vyberete jedním kliknutím; jinou lokalitu zadejte přes „Jiné město“.
+                            </span>
+                        </div>
+                        <div class="form-group">
+                            <label for="date_from_chg">Datum příjezdu <span class="required">*</span></label>
+                            <input id="date_from_chg" name="date_from_chg" type="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="date_to_chg">Datum odjezdu <span class="required">*</span></label>
+                            <input id="date_to_chg" name="date_to_chg" type="date" required>
+                        </div>
+                    </div>
+                    <div class="form-row" id="city-other-row-chg" hidden>
+                        <div class="form-group" id="city-other-group-chg">
+                            <label for="city_other_chg">Upřesněte město <span class="required">*</span></label>
+                            <input id="city_other_chg" name="city_other_chg" type="text" autocomplete="address-level2" placeholder="Např. Olomouc" aria-describedby="city-chg-hint" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="room_type_chg">Typ pokoje <span class="required">*</span></label>
+                            <select id="room_type_chg" name="room_type_chg" required>
+                                <option value="single">Jednolůžkový pokoj</option>
+                                <option value="multi">Dvoulůžkový pokoj</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="bed-preference-group-chg">
+                            <label for="bed_preference_chg">Rozložení lůžek</label>
+                            <select id="bed_preference_chg" name="bed_preference_chg">
+                                <option value="">Bez preference</option>
+                                <option value="double">Manželská postel</option>
+                                <option value="twin">Oddělená lůžka</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="note_chg">Poznámka</label>
+                            <textarea id="note_chg" name="note_chg"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <span id="sec-priority-chg" class="urgency-field-label">Priorita požadavku</span>
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-priority-chg">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="urgency_chg" value="STANDARD" id="urgency_standard_chg">
+                                    Běžná
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="urgency_chg" value="URGENT" id="urgency_urgent_chg">
+                                    Urgentní
+                                </label>
+                            </div>
+                            <span class="form-hint">Urgentní prioritu zvolte jen tehdy, když je potřeba rychlejší vyřízení změny.</span>
+                        </div>
+                    </div>
+                    <div class="form-row" id="urgency-reason-row-chg" hidden>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="urgency_reason_chg">Důvod urgentní priority <span class="required">*</span></label>
+                            <input id="urgency_reason_chg" name="urgency_reason_chg" type="text" maxlength="500" autocomplete="off" placeholder="Krátce proč je změna urgentní">
+                        </div>
+                    </div>
+                </section>
+                <div class="form-actions">
+                    <button type="submit" class="cta" id="change-submit-btn">Odeslat požadavek na změnu</button>
+                </div>
+            </form>
+        </div>
+
         <div class="form-container loaded user-detail-standalone-cancel" id="detail-standalone-cancel" hidden>
             <div class="form-actions user-detail-cancel-actions">
                 <button type="button" class="ghost" id="cancel-standalone-btn">Zrušit žádost</button>
@@ -181,6 +340,28 @@
                             <textarea id="note" name="note"></textarea>
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <span id="sec-priority-edit" class="urgency-field-label">Priorita požadavku</span>
+                            <div class="urgency-choice-row" role="radiogroup" aria-labelledby="sec-priority-edit">
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="urgency" value="STANDARD" id="urgency_standard_edit">
+                                    Běžná
+                                </label>
+                                <label class="urgency-radio-label">
+                                    <input type="radio" name="urgency" value="URGENT" id="urgency_urgent_edit">
+                                    Urgentní
+                                </label>
+                            </div>
+                            <span class="form-hint">Urgentní prioritu zvolte jen tehdy, když je potřeba rychlejší vyřízení.</span>
+                        </div>
+                    </div>
+                    <div class="form-row" id="urgency-reason-row-edit" hidden>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="urgency_reason">Důvod urgentní priority <span class="required">*</span></label>
+                            <input id="urgency_reason" name="urgency_reason" type="text" maxlength="500" autocomplete="off" placeholder="Krátce proč je žádost urgentní">
+                        </div>
+                    </div>
                 </section>
                 <div class="form-actions">
                     <button type="submit" class="cta" id="save-btn">Uložit změny</button>
@@ -202,7 +383,7 @@
         </div>
     </footer>
 
-    <script src="/js/common.js?v=5"></script>
+    <script src="/js/common.js?v=8"></script>
     <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
@@ -244,6 +425,49 @@
             const secondaryGuestSectionEdit = document.getElementById("secondary-guest-section-edit");
             const secondaryGuestNameEdit = document.getElementById("secondary_guest_name");
             const secondaryGuestEmailEdit = document.getElementById("secondary_guest_email");
+            const urgencyReasonRowEdit = document.getElementById("urgency-reason-row-edit");
+            const urgencyReasonInput = document.getElementById("urgency_reason");
+
+            const workflowWrap = document.getElementById("detail-workflow-wrap");
+            const workflowHintEl = document.getElementById("detail-workflow-hint");
+            const pendingEmployeeWrap = document.getElementById("detail-pending-employee-wrap");
+            const pendingEmployeeMeta = document.getElementById("detail-pending-employee-meta");
+            const pendingEmployeeDiff = document.getElementById("detail-pending-employee-diff");
+            const changeWrap = document.getElementById("detail-change-request");
+            const changeForm = document.getElementById("change-form");
+            const roomTypeChg = document.getElementById("room_type_chg");
+            const bedGroupChg = document.getElementById("bed-preference-group-chg");
+            const bedSelectChg = document.getElementById("bed_preference_chg");
+            const cityPresetChg = document.getElementById("city_preset_chg");
+            const cityOtherRowChg = document.getElementById("city-other-row-chg");
+            const cityOtherChg = document.getElementById("city_other_chg");
+            const cityPresetGroupChg = document.getElementById("city-preset-group-chg");
+            const cityOtherGroupChg = document.getElementById("city-other-group-chg");
+            const primaryGuestRowChg = document.getElementById("primary-guest-row-chg");
+            const primaryGuestNameChg = document.getElementById("primary_guest_name_chg");
+            const primaryGuestEmailChg = document.getElementById("primary_guest_email_chg");
+            const secondaryGuestSectionChg = document.getElementById("secondary-guest-section-chg");
+            const secondaryGuestNameChg = document.getElementById("secondary_guest_name_chg");
+            const secondaryGuestEmailChg = document.getElementById("secondary_guest_email_chg");
+            const urgencyReasonRowChg = document.getElementById("urgency-reason-row-chg");
+            const urgencyReasonInputChg = document.getElementById("urgency_reason_chg");
+            const changeSubmitBtn = document.getElementById("change-submit-btn");
+
+            function syncUrgencyEdit() {
+                const urgent = document.getElementById("urgency_urgent_edit").checked;
+                if (urgent) {
+                    urgencyReasonRowEdit.removeAttribute("hidden");
+                    urgencyReasonInput.required = true;
+                } else {
+                    urgencyReasonRowEdit.setAttribute("hidden", "");
+                    urgencyReasonInput.required = false;
+                    urgencyReasonInput.value = "";
+                }
+            }
+
+            document.querySelectorAll('#edit-form input[name="urgency"]').forEach((el) => {
+                el.addEventListener("change", syncUrgencyEdit);
+            });
 
             function syncPrimaryGuestUiEdit() {
                 const colleague = document.getElementById("res_for_colleague_edit").checked;
@@ -350,10 +574,163 @@
 
             roomType.addEventListener("change", toggleBedPreference);
 
+            function syncPrimaryGuestUiChg() {
+                const colleague = document.getElementById("res_for_colleague_chg").checked;
+                if (colleague) {
+                    primaryGuestRowChg.removeAttribute("hidden");
+                    primaryGuestNameChg.required = true;
+                    primaryGuestEmailChg.required = true;
+                } else {
+                    primaryGuestRowChg.setAttribute("hidden", "");
+                    primaryGuestNameChg.required = false;
+                    primaryGuestEmailChg.required = false;
+                }
+            }
+
+            function syncSecondaryGuestUiChg() {
+                const two = document.getElementById("occ_2_chg").checked;
+                if (two) {
+                    secondaryGuestSectionChg.removeAttribute("hidden");
+                    secondaryGuestNameChg.required = true;
+                    secondaryGuestEmailChg.required = true;
+                } else {
+                    secondaryGuestSectionChg.setAttribute("hidden", "");
+                    secondaryGuestNameChg.required = false;
+                    secondaryGuestEmailChg.required = false;
+                }
+            }
+
+            document.querySelectorAll('#change-form input[name="reservation_for_chg"]').forEach((el) => {
+                el.addEventListener("change", syncPrimaryGuestUiChg);
+            });
+            document.querySelectorAll('#change-form input[name="staying_person_count_chg"]').forEach((el) => {
+                el.addEventListener("change", syncSecondaryGuestUiChg);
+            });
+
+            function syncUrgencyChg() {
+                const urgent = document.getElementById("urgency_urgent_chg").checked;
+                if (urgent) {
+                    urgencyReasonRowChg.removeAttribute("hidden");
+                    urgencyReasonInputChg.required = true;
+                } else {
+                    urgencyReasonRowChg.setAttribute("hidden", "");
+                    urgencyReasonInputChg.required = false;
+                    urgencyReasonInputChg.value = "";
+                }
+            }
+
+            document.querySelectorAll('#change-form input[name="urgency_chg"]').forEach((el) => {
+                el.addEventListener("change", syncUrgencyChg);
+            });
+
+            function syncCityOtherFieldChg() {
+                const isOther = cityPresetChg.value === "__other__";
+                if (isOther) {
+                    cityOtherRowChg.removeAttribute("hidden");
+                } else {
+                    cityOtherRowChg.setAttribute("hidden", "");
+                }
+                cityOtherChg.required = isOther;
+                cityOtherChg.setAttribute("aria-hidden", isOther ? "false" : "true");
+                if (!isOther) {
+                    cityOtherChg.value = "";
+                    cityOtherGroupChg.classList.remove("form-group--city-error");
+                }
+            }
+
+            function clearCityFieldErrorsChg() {
+                cityPresetGroupChg.classList.remove("form-group--city-error");
+                cityOtherGroupChg.classList.remove("form-group--city-error");
+            }
+
+            function resolveCityForSubmitChg() {
+                const preset = cityPresetChg.value;
+                if (!preset) {
+                    return { ok: false, message: "Vyberte město pobytu." };
+                }
+                if (preset === "__other__") {
+                    const custom = cityOtherChg.value.trim();
+                    if (!custom) {
+                        return {
+                            ok: false,
+                            message: "Vyplňte pole Upřesněte město.",
+                            highlightOther: true,
+                        };
+                    }
+                    return { ok: true, city: custom };
+                }
+                return { ok: true, city: preset };
+            }
+
+            function applyCityFromSavedChg(cityStr) {
+                const c = String(cityStr || "");
+                if (c === "Praha" || c === "Brno") {
+                    cityPresetChg.value = c;
+                    cityOtherChg.value = "";
+                } else {
+                    cityPresetChg.value = "__other__";
+                    cityOtherChg.value = c;
+                }
+                syncCityOtherFieldChg();
+            }
+
+            cityPresetChg.addEventListener("change", () => {
+                clearCityFieldErrorsChg();
+                syncCityOtherFieldChg();
+            });
+
+            function toggleBedPreferenceChg() {
+                const isSingle = roomTypeChg.value === "single";
+                bedGroupChg.hidden = isSingle;
+                if (isSingle) {
+                    bedSelectChg.value = "";
+                }
+            }
+
+            roomTypeChg.addEventListener("change", toggleBedPreferenceChg);
+
+            function fillChangeForm(r) {
+                document.getElementById("requester_name_chg").value = r.requester_name;
+                const rf = r.reservation_for || "SELF";
+                if (rf === "COLLEAGUE") {
+                    document.getElementById("res_for_colleague_chg").checked = true;
+                } else {
+                    document.getElementById("res_for_self_chg").checked = true;
+                }
+                const occ = Number(r.staying_person_count) || 1;
+                if (occ === 2) {
+                    document.getElementById("occ_2_chg").checked = true;
+                } else {
+                    document.getElementById("occ_1_chg").checked = true;
+                }
+                primaryGuestNameChg.value = r.primary_guest_name || "";
+                primaryGuestEmailChg.value = r.primary_guest_email || "";
+                secondaryGuestNameChg.value = r.secondary_guest_name || "";
+                secondaryGuestEmailChg.value = r.secondary_guest_email || "";
+                applyCityFromSavedChg(r.city);
+                document.getElementById("date_from_chg").value = r.date_from;
+                document.getElementById("date_to_chg").value = r.date_to;
+                roomTypeChg.value = r.room_type;
+                bedSelectChg.value = r.bed_preference || "";
+                document.getElementById("note_chg").value = r.note || "";
+                if (r.urgency === "URGENT") {
+                    document.getElementById("urgency_urgent_chg").checked = true;
+                } else {
+                    document.getElementById("urgency_standard_chg").checked = true;
+                }
+                urgencyReasonInputChg.value = r.urgency_reason || "";
+                toggleBedPreferenceChg();
+                syncPrimaryGuestUiChg();
+                syncSecondaryGuestUiChg();
+                syncUrgencyChg();
+            }
+
             const SYSTEM_HINTS = {
                 NEW: "Žádost můžete upravit nebo zrušit, dokud není rezervace uzavřena.",
-                IN_PROGRESS: "Tato žádost už není editovatelná.",
-                BOOKED: "Pro úpravy už kontaktujte recepci. Žádost můžete ještě zrušit.",
+                IN_PROGRESS:
+                    "Tato žádost je již zpracovávaná. Přímou úpravu potvrzených údajů nelze provést — můžete podat požadavek na změnu níže.",
+                BOOKED:
+                    "Tato žádost je již rezervovaná. Přímou úpravu potvrzených údajů nelze provést — můžete podat požadavek na změnu rezervace níže.",
                 CANCELLED: "Tato žádost je uzavřená a již ji nelze měnit.",
             };
 
@@ -386,6 +763,11 @@
           <dt>Typ pokoje</dt><dd>${HotelCommon.escapeHtml(HotelCommon.roomTypeLabel(r.room_type))}</dd>
           <dt>Rozložení lůžek</dt><dd>${HotelCommon.escapeHtml(HotelCommon.bedPreferenceLabel(r.bed_preference))}</dd>
           <dt>Poznámka</dt><dd>${r.note ? HotelCommon.escapeHtml(r.note) : "—"}</dd>
+          <dt>Urgence</dt><dd>${
+              r.urgency === "URGENT"
+                  ? HotelCommon.escapeHtml("Urgentní — " + (r.urgency_reason || "—"))
+                  : "Běžná"
+          }</dd>
           <dt>Hotel / číslo</dt><dd>${r.hotel_name ? HotelCommon.escapeHtml(r.hotel_name) : "—"} / ${r.reservation_number ? HotelCommon.escapeHtml(r.reservation_number) : "—"}</dd>`;
                 readonlyBox.hidden = false;
             }
@@ -414,9 +796,16 @@
                 roomType.value = r.room_type;
                 bedSelect.value = r.bed_preference || "";
                 document.getElementById("note").value = r.note || "";
+                if (r.urgency === "URGENT") {
+                    document.getElementById("urgency_urgent_edit").checked = true;
+                } else {
+                    document.getElementById("urgency_standard_edit").checked = true;
+                }
+                urgencyReasonInput.value = r.urgency_reason || "";
                 toggleBedPreference();
                 syncPrimaryGuestUiEdit();
                 syncSecondaryGuestUiEdit();
+                syncUrgencyEdit();
             }
 
             (async () => {
@@ -441,6 +830,7 @@
                 const isBooked = r.status === "BOOKED";
                 const isNew = r.status === "NEW";
                 const isInProgress = r.status === "IN_PROGRESS";
+                const hasPendingChange = !!(r.pending_change && r.pending_change.changes && r.pending_change.changes.length);
 
                 renderMeta(r);
 
@@ -451,6 +841,8 @@
 
                 standaloneCancelBlock.hidden = !(isInProgress || isBooked);
                 cancelBookedFollowup.hidden = !isBooked;
+                workflowWrap.hidden = !(isInProgress || isBooked);
+                workflowHintEl.textContent = SYSTEM_HINTS[r.status] || "";
 
                 function wireCancelButton(btn, bookedFlow) {
                     btn.addEventListener("click", async () => {
@@ -480,6 +872,138 @@
                         document.getElementById("cancel-standalone-btn"),
                         isBooked
                     );
+                    if (hasPendingChange) {
+                        pendingEmployeeWrap.hidden = false;
+                        changeWrap.hidden = true;
+                        const sub = r.pending_change.submitted_at
+                            ? HotelCommon.formatRequestSubmittedPlain(r.pending_change.submitted_at)
+                            : "";
+                        pendingEmployeeMeta.textContent = sub
+                            ? "Podáno " + sub + " (čas podle vašeho zařízení)."
+                            : "";
+                        pendingEmployeeDiff.innerHTML =
+                            HotelCommon.changeDiffTableHtml(r.pending_change.changes);
+                    } else {
+                        pendingEmployeeWrap.hidden = true;
+                        changeWrap.hidden = false;
+                        fillChangeForm(r);
+                        changeSubmitBtn.textContent = isBooked
+                            ? "Odeslat požadavek na změnu rezervace"
+                            : "Odeslat požadavek na změnu";
+                    }
+                    if (!hasPendingChange) {
+                    changeForm.addEventListener("submit", async (e) => {
+                        e.preventDefault();
+                        if (hasPendingChange) {
+                            return;
+                        }
+                        const dateFrom = document.getElementById("date_from_chg").value;
+                        const dateTo = document.getElementById("date_to_chg").value;
+                        if (dateTo < dateFrom) {
+                            showMessage("error", "Datum odjezdu musí být po příjezdu.");
+                            return;
+                        }
+                        const cityRes = resolveCityForSubmitChg();
+                        if (!cityRes.ok) {
+                            clearCityFieldErrorsChg();
+                            if (cityRes.highlightOther) {
+                                cityOtherGroupChg.classList.add("form-group--city-error");
+                                cityOtherChg.focus();
+                            } else {
+                                cityPresetGroupChg.classList.add("form-group--city-error");
+                                cityPresetChg.focus();
+                            }
+                            showMessage("error", cityRes.message);
+                            return;
+                        }
+                        const reservationFor = document.querySelector(
+                            '#change-form input[name="reservation_for_chg"]:checked'
+                        ).value;
+                        const stayingPersonCount = parseInt(
+                            document.querySelector(
+                                '#change-form input[name="staying_person_count_chg"]:checked'
+                            ).value,
+                            10
+                        );
+                        if (reservationFor === "COLLEAGUE") {
+                            if (!primaryGuestNameChg.value.trim()) {
+                                showMessage(
+                                    "error",
+                                    "Vyplňte jméno a příjmení hlavní ubytované osoby."
+                                );
+                                primaryGuestNameChg.focus();
+                                return;
+                            }
+                            if (!primaryGuestEmailChg.value.trim()) {
+                                showMessage("error", "Vyplňte e-mail hlavní ubytované osoby.");
+                                primaryGuestEmailChg.focus();
+                                return;
+                            }
+                        }
+                        if (stayingPersonCount === 2) {
+                            if (!secondaryGuestNameChg.value.trim()) {
+                                showMessage(
+                                    "error",
+                                    "Vyplňte jméno a příjmení druhé ubytované osoby."
+                                );
+                                secondaryGuestNameChg.focus();
+                                return;
+                            }
+                            if (!secondaryGuestEmailChg.value.trim()) {
+                                showMessage("error", "Vyplňte e-mail druhé ubytované osoby.");
+                                secondaryGuestEmailChg.focus();
+                                return;
+                            }
+                        }
+                        const urgencyUrgent = document.getElementById("urgency_urgent_chg").checked;
+                        const urgency = urgencyUrgent ? "URGENT" : "STANDARD";
+                        const reasonRaw = urgencyReasonInputChg.value.trim();
+                        if (urgencyUrgent && !reasonRaw) {
+                            showMessage(
+                                "error",
+                                "Vyplňte důvod urgentní priority."
+                            );
+                            urgencyReasonInputChg.focus();
+                            return;
+                        }
+                        const body = {
+                            requester_name: document.getElementById("requester_name_chg").value.trim(),
+                            reservation_for: reservationFor,
+                            staying_person_count: stayingPersonCount,
+                            city: cityRes.city,
+                            date_from: dateFrom,
+                            date_to: dateTo,
+                            room_type: roomTypeChg.value,
+                            note: document.getElementById("note_chg").value.trim() || null,
+                            urgency,
+                            urgency_reason: urgencyUrgent ? reasonRaw : null,
+                        };
+                        if (reservationFor === "COLLEAGUE") {
+                            body.primary_guest_name = primaryGuestNameChg.value.trim();
+                            body.primary_guest_email = primaryGuestEmailChg.value.trim();
+                        }
+                        if (stayingPersonCount === 2) {
+                            body.secondary_guest_name = secondaryGuestNameChg.value.trim();
+                            body.secondary_guest_email = secondaryGuestEmailChg.value.trim();
+                        }
+                        if (roomTypeChg.value === "multi") {
+                            body.bed_preference = bedSelectChg.value || null;
+                        } else {
+                            body.bed_preference = null;
+                        }
+                        const { res: sr, data: sd } = await HotelAuth.apiJson(
+                            "/reservations/" +
+                                encodeURIComponent(rid) +
+                                "/change-request",
+                            { method: "POST", body: JSON.stringify(body) }
+                        );
+                        if (!sr.ok) {
+                            showMessage("error", HotelCommon.parseErrorDetail(sd));
+                            return;
+                        }
+                        window.location.reload();
+                    });
+                    }
                     return;
                 }
                 if (!isNew) {
@@ -546,6 +1070,14 @@
                             return;
                         }
                     }
+                    const urgencyUrgentEdit = document.getElementById("urgency_urgent_edit").checked;
+                    const urgencyVal = urgencyUrgentEdit ? "URGENT" : "STANDARD";
+                    const urgencyReasonVal = urgencyReasonInput.value.trim();
+                    if (urgencyUrgentEdit && !urgencyReasonVal) {
+                        showMessage("error", "Vyplňte důvod urgentní priority.");
+                        urgencyReasonInput.focus();
+                        return;
+                    }
                     const body = {
                         requester_name: document.getElementById("requester_name").value.trim(),
                         reservation_for: reservationFor,
@@ -555,6 +1087,8 @@
                         date_to: dateTo,
                         room_type: roomType.value,
                         note: document.getElementById("note").value.trim() || null,
+                        urgency: urgencyVal,
+                        urgency_reason: urgencyUrgentEdit ? urgencyReasonVal : null,
                     };
                     if (reservationFor === "COLLEAGUE") {
                         body.primary_guest_name = primaryGuestNameEdit.value.trim();
