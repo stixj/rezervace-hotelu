@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail žádosti (recepce)</title>
-    <link rel="stylesheet" href="/css/direct-theme.css?v=8">
+    <link rel="stylesheet" href="/css/direct-theme.css?v=9">
     <script src="/js/config.js"></script>
 </head>
 <body>
@@ -61,6 +61,17 @@
                     hidden
                     role="note"
                 ></p>
+            </section>
+
+            <section
+                class="reception-work-history-section"
+                id="reception-work-history-section"
+                aria-labelledby="reception-work-history-heading"
+            >
+                <h2 id="reception-work-history-heading" class="request-panel-heading">
+                    Pracovní historie
+                </h2>
+                <div id="reception-work-history-mount" class="reception-work-history-mount"></div>
             </section>
 
             <section
@@ -172,7 +183,7 @@
         </div>
     </footer>
 
-    <script src="/js/common.js?v=8"></script>
+    <script src="/js/common.js?v=9"></script>
     <script src="/js/auth.js?v=2"></script>
     <script src="/js/nav.js"></script>
     <script>
@@ -201,6 +212,8 @@
             const readonlyPriority = document.getElementById("readonly-priority");
             const readonlyPeople = document.getElementById("readonly-people");
             const readonlyStay = document.getElementById("readonly-stay");
+            const workHistoryMount = document.getElementById("reception-work-history-mount");
+            const workHistorySection = document.getElementById("reception-work-history-section");
             const form = document.getElementById("status-form");
             const statusEl = document.getElementById("status");
             const hotelEl = document.getElementById("hotel_name");
@@ -284,6 +297,11 @@
               </div>
             </div>
           </div>`;
+
+                const workHistoryItems = HotelCommon.receptionWorkHistoryItems(r);
+                workHistoryMount.innerHTML =
+                    HotelCommon.receptionWorkHistoryListHtml(workHistoryItems);
+                workHistorySection.hidden = workHistoryItems.length === 0;
 
                 let secondPersonCard = "";
                 if (occ === 2) {

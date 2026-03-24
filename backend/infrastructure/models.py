@@ -97,3 +97,6 @@ class ReservationRequest(SQLModel, table=True):
     pending_change_json: Optional[str] = Field(
         default=None, sa_column=Column(Text, nullable=True)
     )
+    # Reception work history (last occurrence only; not a full audit trail)
+    last_change_request_at: Optional[datetime] = None
+    last_change_cleared_at: Optional[datetime] = None

@@ -59,7 +59,12 @@ def _reservation_read_from_row(row: ReservationRequest) -> ReservationRead:
 def _admin_reservation_read_from_row(row: ReservationRequest) -> AdminReservationRead:
     base = _reservation_read_from_row(row)
     return AdminReservationRead.model_validate(
-        {**base.model_dump(), "reception_internal_note": row.reception_internal_note}
+        {
+            **base.model_dump(),
+            "reception_internal_note": row.reception_internal_note,
+            "last_change_request_at": row.last_change_request_at,
+            "last_change_cleared_at": row.last_change_cleared_at,
+        }
     )
 
 
@@ -621,6 +626,7 @@ def submit_change_request(
     }
     row.pending_change_submitted_at = now
     row.pending_change_json = json.dumps(payload, ensure_ascii=False)
+    row.last_change_request_at = now
     row.updated_at = now
     session.add(row)
     session.commit()
@@ -651,6 +657,7 @@ def clear_pending_change_request(session: Session, reservation_id: UUID) -> Admi
         raise HTTPException(status_code=404, detail="Reservation not found")
     row.pending_change_submitted_at = None
     row.pending_change_json = None
+    row.last_change_cleared_at = datetime.utcnow()
     row.updated_at = datetime.utcnow()
     session.add(row)
     session.commit()
@@ -699,6 +706,12 @@ def update_status(
         raise HTTPException(status_code=404, detail="Reservation not found")
 
     previous_status = row.status
+
+    if (
+        data.status == RequestStatus.CANCELLED
+        and previous_status != RequestStatus.CANCELLED
+    ):
+        row.cancelled_at = datetime.utcnow()
 
     if data.status == RequestStatus.BOOKED:
         if not data.hotel_name or not data.reservation_number:

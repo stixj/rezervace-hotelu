@@ -258,3 +258,5 @@ class AdminReservationRead(ReservationRead):
     """Admin/reception API only — includes fields hidden from employee clients."""
 
     reception_internal_note: Optional[str] = None
+    last_change_request_at: Optional[datetime] = None
+    last_change_cleared_at: Optional[datetime] = None

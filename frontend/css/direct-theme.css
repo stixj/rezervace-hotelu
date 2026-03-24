@@ -2197,6 +2197,79 @@ button.linklike {
     background: rgba(255, 255, 255, 0.65);
 }
 
+.reception-work-history-section {
+    margin-bottom: 1rem;
+}
+
+.reception-work-history-section .request-panel-heading {
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+}
+
+.reception-work-history-mount {
+    margin: 0;
+}
+
+.reception-work-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 0.35rem;
+    border-left: 2px solid rgba(0, 64, 51, 0.12);
+}
+
+.reception-work-history-item {
+    position: relative;
+    margin: 0;
+    padding: 0.3rem 0 0.3rem 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.38;
+    color: var(--text, #1a1a1a);
+}
+
+.reception-work-history-item::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 0.55em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(0, 64, 51, 0.32);
+    border: 1px solid var(--surface, #fff);
+    box-sizing: border-box;
+}
+
+.reception-work-history-item__time {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 0.06rem;
+}
+
+.reception-work-history-item__label {
+    display: block;
+    font-weight: 500;
+    color: var(--text, #1a1a1a);
+}
+
+@media (min-width: 640px) {
+    .reception-work-history-item {
+        display: grid;
+        grid-template-columns: 7.75rem minmax(0, 1fr);
+        gap: 0.35rem 0.85rem;
+        align-items: baseline;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .reception-work-history-item__time {
+        margin-bottom: 0;
+    }
+}
+
 .reception-change-section {
     margin-bottom: 1.25rem;
     padding: 0.85rem 1rem 1rem;

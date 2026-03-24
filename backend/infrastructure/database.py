@@ -233,6 +233,41 @@ def _migrate_pending_change_request() -> None:
     logger.info("Migration: reservation_request pending change columns ensured")
 
 
+def _migrate_reception_work_history_timestamps() -> None:
+    """Last change request / clear times for compact reception timeline (not full audit)."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if not insp.has_table("reservation_request"):
+        return
+    cols = {c["name"] for c in insp.get_columns("reservation_request")}
+    with engine.connect() as conn:
+        if "last_change_request_at" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE reservation_request ADD COLUMN last_change_request_at DATETIME"
+                )
+            )
+            conn.commit()
+        if "last_change_cleared_at" not in cols:
+            conn.execute(
+                text(
+                    "ALTER TABLE reservation_request ADD COLUMN last_change_cleared_at DATETIME"
+                )
+            )
+            conn.commit()
+    cols = {c["name"] for c in insp.get_columns("reservation_request")}
+    if "last_change_request_at" in cols:
+        with engine.connect() as conn:
+            conn.execute(
+                text(
+                    "UPDATE reservation_request SET last_change_request_at = pending_change_submitted_at "
+                    "WHERE last_change_request_at IS NULL AND pending_change_submitted_at IS NOT NULL"
+                )
+            )
+            conn.commit()
+    logger.info("Migration: reception work history timestamp columns ensured")
+
+
 def init_db() -> None:
     # Import models so SQLModel registers metadata
     from infrastructure import models  # noqa: F401
@@ -244,6 +279,7 @@ def init_db() -> None:
     _migrate_guest_fields_coherence()
     _migrate_reception_internal_note()
     _migrate_pending_change_request()
+    _migrate_reception_work_history_timestamps()
     from application.auth_service import seed_bootstrap_users
 
     with Session(get_engine()) as session:

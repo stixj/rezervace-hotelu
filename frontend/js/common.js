@@ -155,6 +155,60 @@
     /**
      * @param {{ field_key?: string, label: string, old_value?: string, new_value?: string, oldValue?: string, newValue?: string }[]} changes
      */
+    /**
+     * Compact reception timeline from persisted fields only (newest first).
+     * @param {Record<string, unknown>} r Admin reservation payload
+     * @returns {{ t: number, isoAttr: string, label: string }[]}
+     */
+    function receptionWorkHistoryItems(r) {
+        if (!r) {
+            return [];
+        }
+        const out = [];
+        const push = (iso, label) => {
+            if (iso == null || String(iso).trim() === "") {
+                return;
+            }
+            const d = parseBackendUtcDateTime(iso);
+            if (!d) {
+                return;
+            }
+            out.push({
+                t: d.getTime(),
+                isoAttr: d.toISOString(),
+                label,
+            });
+        };
+        push(r.created_at, "Žádost podána");
+        push(r.last_change_request_at, "Odeslán požadavek na změnu");
+        push(r.last_change_cleared_at, "Změna zpracována recepcí");
+        if (r.status === "CANCELLED") {
+            push(r.cancelled_at, "Žádost zrušena");
+        }
+        out.sort((a, b) => b.t - a.t);
+        return out;
+    }
+
+    /**
+     * @param {{ t: number, isoAttr: string, label: string }[]} items
+     */
+    function receptionWorkHistoryListHtml(items) {
+        if (!items.length) {
+            return "";
+        }
+        const rows = items.map((it) => {
+            const when = formatRequestSubmittedPlain(it.isoAttr);
+            const whenSafe = when ? escapeHtml(when) : "";
+            return (
+                `<li class="reception-work-history-item">` +
+                `<time class="reception-work-history-item__time" datetime="${escapeHtml(it.isoAttr)}">${whenSafe}</time>` +
+                `<span class="reception-work-history-item__label">${escapeHtml(it.label)}</span>` +
+                `</li>`
+            );
+        });
+        return `<ul class="reception-work-history-list">${rows.join("")}</ul>`;
+    }
+
     function changeDiffTableHtml(changes) {
         if (!changes || !changes.length) {
             return "";
@@ -201,5 +255,7 @@
         CHANGE_DIFF_LODGING_KEYS,
         changeDiffCellDisplay,
         changeDiffTableHtml,
+        receptionWorkHistoryItems,
+        receptionWorkHistoryListHtml,
     });
 })(window);
